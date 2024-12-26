@@ -81,6 +81,8 @@ if 'page' in st.session_state and st.session_state.page == "main_model_service":
             if target_column in data.columns:
                 X = data.drop(columns=[target_column])
                 y = data[target_column]
+                st.subheader(f"Целевая переменная: {target_column}")
+                st.write(y.value_counts())  # Показываем распределение целевой переменной
             else:
                 st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
                 st.stop()
