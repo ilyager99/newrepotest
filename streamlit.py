@@ -32,7 +32,7 @@ api_client = ModelAPI(host, port)
 st.title("Модель по анализу данных")
 
 # Навигация между страницами
-st.sidebar.header("Навигация")
+st.sidebar.header("Быстрое меню")
 page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
 
 if page == "Обучение модели":
