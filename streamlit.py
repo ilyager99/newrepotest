@@ -51,6 +51,12 @@ if st.session_state.page == "welcome":
         st.session_state.page = "model_info"
 
 elif st.session_state.page == "training_model":
+    st.header("Обучение модели")
+    
+    # Кнопка назад
+    if st.button("Назад"):
+        st.session_state.page = "welcome"
+
     # Типы модели
     type_of_model = st.selectbox("Выберите модель", ["Ridge Classifier", "CatBoost Classifier"])
 
@@ -136,6 +142,11 @@ elif st.session_state.page == "training_model":
 
 elif st.session_state.page == "model_info":
     st.header("Информация о модели")
+    
+    # Кнопка назад
+    if st.button("Назад"):
+        st.session_state.page = "welcome"
+
     model_id = st.text_input("Введите ID модели для получения информации", value="model")
 
     if st.button("Получить информацию о модели"):
