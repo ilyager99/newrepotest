@@ -31,11 +31,19 @@ api_client = ModelAPI(host, port)
 # Заголовок приложения
 st.title("Модель по анализу данных")
 
-# Навигация между страницами
-st.sidebar.header("Быстрое меню")
-page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
+# Переменная состояния для страницы
+if 'page' not in st.session_state:
+    st.session_state.page = "Обучение модели"  # По умолчанию открываем страницу "Обучение модели"
 
-if page == "Обучение модели":
+# Кнопки для навигации между страницами
+if st.button("Обучение модели"):
+    st.session_state.page = "Обучение модели"
+    
+if st.button("Информация о модели"):
+    st.session_state.page = "Информация о модели"
+
+# Страница "Обучение модели"
+if st.session_state.page == "Обучение модели":
     st.header("Обучение модели")
     
     # Типы модели
@@ -131,7 +139,8 @@ if page == "Обучение модели":
                 st.write("Важность признаков:")
                 st.bar_chart(feature_importances_df.set_index("Feature"))
 
-elif page == "Информация о модели":
+# Страница "Информация о модели"
+elif st.session_state.page == "Информация о модели":
     st.header("Информация о модели")
     
     model_id = st.text_input("Введите ID модели для получения информации", value="model")
