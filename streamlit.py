@@ -31,17 +31,25 @@ api_client = ModelAPI(host, port)
 # Заголовок приложения
 st.title("Модель по анализу данных")
 
-# Навигация между страницами
-st.sidebar.header("Быстрое меню")
-page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
-
-if page == "Обучение модели":
-    st.header("Обучение модели")
+# Навигация между страницами с использованием кнопок
+if st.button("Обучение модели"):
+    st.session_state.page = "training_model"
     
+if st.button("Информация о модели"):
+    st.session_state.page = "model_info"
+
+# Установка начальной страницы
+if 'page' not in st.session_state:
+    st.session_state.page = "training_model"  # По умолчанию открываем страницу "Обучение модели"
+
+# Страница "Обучение модели"
+if st.session_state.page == "training_model":
+    st.header("Обучение модели")
+
     # Кнопки для выбора типа модели
     st.subheader("Выберите модель")
     
-    # Переменная для хранения выбранной модели в состоянии сессии
+    # Переменная для сохранения выбранной модели
     if 'type_of_model' not in st.session_state:
         st.session_state.type_of_model = None
 
@@ -89,7 +97,7 @@ if page == "Обучение модели":
             if target_column in data.columns:
                 X = data.drop(columns=[target_column])
                 y = data[target_column]
-                
+
                 # Отображение целевой переменной на экране
                 st.subheader(f"Целевая переменная: {target_column}")
                 st.write(y.value_counts())  # Показываем распределение целевой переменной
