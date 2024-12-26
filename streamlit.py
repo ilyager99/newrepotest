@@ -40,25 +40,35 @@ if page == "Обучение модели":
     
     # Кнопки для выбора типа модели
     st.subheader("Выберите модель")
-    if st.button("Ridge Classifier"):
-        type_of_model = "Ridge Classifier"
-    elif st.button("CatBoost Classifier"):
-        type_of_model = "CatBoost Classifier"
-    else:
-        type_of_model = None
+    
+    # Переменная для хранения выбранной модели в состоянии сессии
+    if 'type_of_model' not in st.session_state:
+        st.session_state.type_of_model = None
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Ridge Classifier"):
+            st.session_state.type_of_model = "Ridge Classifier"
+    with col2:
+        if st.button("CatBoost Classifier"):
+            st.session_state.type_of_model = "CatBoost Classifier"
+    
+    # Кнопка "Назад"
+    if st.button("Назад к выбору модели"):
+        st.session_state.type_of_model = None  # Сбрасываем выбор модели
 
     # Убедимся, что модель выбрана
-    if type_of_model is not None:
-        st.write(f"Выбрана модель: {type_of_model}")
+    if st.session_state.type_of_model is not None:
+        st.write(f"Выбрана модель: {st.session_state.type_of_model}")
 
         # Параметры моделей
-        params = {"type_of_model": type_of_model}
+        params = {"type_of_model": st.session_state.type_of_model}
 
-        if type_of_model == "Ridge Classifier":
+        if st.session_state.type_of_model == "Ridge Classifier":
             params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
             params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
 
-        elif type_of_model == "CatBoost Classifier":
+        elif st.session_state.type_of_model == "CatBoost Classifier":
             params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
             params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
             params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
@@ -93,9 +103,9 @@ if page == "Обучение модели":
                 start_time = time.time()  # Засекаем время обучения модели
 
                 # Проводим кросс-валидацию локально
-                if type_of_model == "Ridge Classifier":
+                if st.session_state.type_of_model == "Ridge Classifier":
                     model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
-                elif type_of_model == "CatBoost Classifier":
+                elif st.session_state.type_of_model == "CatBoost Classifier":
                     model = CatBoostClassifier(
                         learning_rate=params["learning_rate"],
                         depth=params["depth"],
@@ -130,7 +140,7 @@ if page == "Обучение модели":
                 st.write(f"Стандартное отклонение точности: {std_accuracy:.4f}")
 
                 # Важность признаков для CatBoost
-                if type_of_model == "CatBoost Classifier":
+                if st.session_state.type_of_model == "CatBoost Classifier":
                     feature_importances = model.get_feature_importance()
                     feature_importances_df = pd.DataFrame({
                         "Feature": X.columns,
