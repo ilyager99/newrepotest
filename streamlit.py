@@ -7,6 +7,52 @@ from sklearn.metrics import mean_squared_error
 from catboost import CatBoostRegressor
 from sklearn.linear_model import Ridge
 
+# Установка конфигураций страницы
+st.set_page_config(page_title="Модель по анализу данных", layout="wide")
+
+# Задаем цвета и шрифты
+primaryColor = '#7792E3'
+backgroundColor = '#273346'
+secondaryBackgroundColor = '#B9F1C0'
+textColor = '#FFFFFF'
+font = "sans serif"
+
+# Применение стилей
+st.markdown(
+    f"""
+    <style>
+        .reportview-container {{
+            background-color: {backgroundColor};
+            color: {textColor};
+            font-family: {font};
+        }}
+        .sidebar .sidebar-content {{
+            background-color: {secondaryBackgroundColor};
+        }}
+        .stButton>button {{
+            background-color: {primaryColor};
+            color: {textColor};
+        }}
+        .stTextInput>div>input {{
+            background-color: {secondaryBackgroundColor};
+            color: {textColor};
+        }}
+        .stSelectbox .stSelectbox>div>div {{
+            background-color: {secondaryBackgroundColor};
+            color: {textColor};
+        }}
+        .stFileUploader>div>input {{
+            background-color: {secondaryBackgroundColor};
+            color: {textColor};
+        }}
+        .stTextInput>div>label {{
+            color: {textColor};
+        }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Классы API
 class ModelAPI:
     def __init__(self, host: str, port: int):
