@@ -77,9 +77,13 @@ if 'page' in st.session_state and st.session_state.page == "main_model_service":
             st.write(data.head())
 
             # Выбор целевой переменной
-            target_column = st.selectbox("Выберите целевую переменную", data.columns)
-            X = data.drop(columns=[target_column])
-            y = data[target_column]
+            target_column = "radiant_win"
+            if target_column in data.columns:
+                X = data.drop(columns=[target_column])
+                y = data[target_column]
+            else:
+                st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
+                st.stop()
 
             # Обучение модели
             if st.button("Обучить модель"):
