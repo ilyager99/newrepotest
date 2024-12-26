@@ -11,11 +11,11 @@ from sklearn.linear_model import Ridge
 st.set_page_config(page_title="Модель по анализу данных", layout="wide")
 
 # Задаем цвета и шрифты
-primaryColor = '#7792E3'
-backgroundColor = '#273346'
-secondaryBackgroundColor = '#B9F1C0'
-textColor = '#FFFFFF'
-font = "sans serif"
+primaryColor = '#7792E3'  # акцентный цвет для интерактивных элементов
+backgroundColor = '#273346'  # цвет фона для основного контента
+secondaryBackgroundColor = '#B9F1C0'  # цвет фона для боковой панели
+textColor = '#FFFFFF'  # цвет текста
+font = "sans serif"  # шрифт
 
 # Применение стилей
 st.markdown(
@@ -28,25 +28,51 @@ st.markdown(
         }}
         .sidebar .sidebar-content {{
             background-color: {secondaryBackgroundColor};
+            color: {textColor};
         }}
         .stButton>button {{
             background-color: {primaryColor};
             color: {textColor};
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }}
+        .stButton>button:hover {{
+            background-color: #5B8AE5; /* Более светлый акцент на наведение */
         }}
         .stTextInput>div>input {{
             background-color: {secondaryBackgroundColor};
             color: {textColor};
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
         }}
         .stSelectbox .stSelectbox>div>div {{
             background-color: {secondaryBackgroundColor};
             color: {textColor};
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
         }}
         .stFileUploader>div>input {{
             background-color: {secondaryBackgroundColor};
             color: {textColor};
+            border: none;
+            border-radius: 4px;
+            padding: 10px;
         }}
         .stTextInput>div>label {{
             color: {textColor};
+        }}
+        .stHeader {{
+            color: {primaryColor};
+        }}
+        .stMarkdown {{
+            color: {textColor};
+        }}
+        .stSubheader {{
+            color: {primaryColor};
         }}
     </style>
     """,
