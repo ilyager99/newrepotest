@@ -137,4 +137,4 @@ elif page == "Информация о модели":
                 }).sort_values(by="Importance", ascending=False)
                 st.bar_chart(feature_importances_df.set_index("Feature"))
         else:
-            st.error("Модель не найдена!")
+            st.error("Такой модельки нет, sorry :(")
