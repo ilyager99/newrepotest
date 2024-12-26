@@ -40,7 +40,7 @@ if 'page' in st.session_state and st.session_state.page == "main_model_service":
     st.title("Модель по анализу данных")
     
     # Используем радиокнопки для выбора страницы
-    st.sidebar.header("Навигация")
+    st.sidebar.header("Быстрое меню")
     page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
     
     if page == "Обучение модели":
