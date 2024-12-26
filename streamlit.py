@@ -28,13 +28,16 @@ host = "http://****"  # Замените на рабочий хост
 port = 8000          # Замените на рабочий порт
 api_client = ModelAPI(host, port)
 
-# Название приложения
+# Заголовок приложения
 st.title("Модель по анализу данных")
 
-# Стороннее меню
-page = st.sidebar.selectbox("Выберите страницу", ["Обучение модели", "Информация о модели"])
+# Навигация между страницами
+st.sidebar.header("Навигация")
+page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
 
 if page == "Обучение модели":
+    st.header("Обучение модели")
+    
     # Типы модели
     type_of_model = st.selectbox("Выберите модель", ["Ridge Classifier", "CatBoost Classifier"])
 
@@ -61,10 +64,18 @@ if page == "Обучение модели":
         st.write("Данные:")
         st.write(data.head())
 
-        # Выбор целевой переменной
-        target_column = st.selectbox("Выберите целевую переменную", data.columns)
-        X = data.drop(columns=[target_column])
-        y = data[target_column]
+        # Устанавливаем целевую переменную без выбора
+        target_column = "radiant_win"
+        if target_column in data.columns:
+            X = data.drop(columns=[target_column])
+            y = data[target_column]
+            
+            # Отображение целевой переменной на экране
+            st.subheader(f"Целевая переменная: {target_column}")
+            st.write(y.value_counts())  # Показываем распределение целевой переменной
+        else:
+            st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
+            st.stop()
 
         # Обучение модели
         if st.button("Обучить модель"):
@@ -120,6 +131,7 @@ if page == "Обучение модели":
 
 elif page == "Информация о модели":
     st.header("Информация о модели")
+    
     model_id = st.text_input("Введите ID модели для получения информации", value="model")
 
     if st.button("Получить информацию о модели"):
