@@ -2,10 +2,11 @@ import streamlit as st
 import requests
 import time
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import KFold
-from sklearn.metrics import mean_squared_error
-from catboost import CatBoostRegressor
-from sklearn.linear_model import Ridge
+from sklearn.metrics import accuracy_score
+from catboost import CatBoostClassifier
+from sklearn.linear_model import RidgeClassifier
 
 # Классы API
 class ModelAPI:
@@ -27,115 +28,134 @@ host = "http://****"  # Замените на рабочий хост
 port = 8000          # Замените на рабочий порт
 api_client = ModelAPI(host, port)
 
-# название
-st.title("Модель по анализу данных")
+# Название приложения
+st.title("Главное меню")
 
-# Стороннее меню
-st.sidebar.header("Навигация")
-page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
+# Главное меню для навигации
+if st.button("Перейти к модели по анализу данных"):
+    st.session_state.page = "main_model_service"  # Переключаемся на страницу сервиса
 
-if page == "Обучение модели":
-    # типы модели
-    type_of_model = st.selectbox("Выберите модель", ["Linear Regression", "CatBoost"])
+# Если страница сервиса активна
+if 'page' in st.session_state and st.session_state.page == "main_model_service":
+    st.title("Модель по анализу данных")
+    
+    # Используем радиокнопки для выбора страницы
+    st.sidebar.header("Навигация")
+    page = st.sidebar.radio("Выберите страницу", ["Обучение модели", "Информация о модели"])
+    
+    if page == "Обучение модели":
+        st.header("Обучение модели")
+        
+        # Кнопка назад
+        if st.button("Назад"):
+            st.session_state.page = None  # Возвращаемся в главное меню
 
-    # параметры моделей
-    params = {"type_of_model": type_of_model}
+        # Типы модели
+        type_of_model = st.selectbox("Выберите модель", ["Ridge Classifier", "CatBoost Classifier"])
 
-    if type_of_model == "Linear Regression":
-        params["alpha"] = st.number_input("Alpha", value=0.01, min_value=0.0)
-        params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
+        # Параметры моделей
+        params = {"type_of_model": type_of_model}
 
-    elif type_of_model == "CatBoost":
-        params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
-        params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
-        params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
-        params["l2_leaf_reg"] = st.number_input("L2 Leaf Regularization", value=3, min_value=1, max_value=10)
+        if type_of_model == "Ridge Classifier":
+            params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
+            params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
 
-    # ID модели
-    params["model_id"] = st.text_input("Введите ID модели", value="model")
+        elif type_of_model == "CatBoost Classifier":
+            params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
+            params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
+            params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
+            params["l2_leaf_reg"] = st.number_input("L2 Leaf Regularization", value=3, min_value=1, max_value=10)
 
-    # загрузка файла
-    uploaded_file = st.file_uploader("Загрузите данные (CSV)", type=["csv"])
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        st.write("Данные:")
-        st.write(data.head())
+        # ID модели
+        params["model_id"] = st.text_input("Введите ID модели", value="model")
 
-        # выбор целевой переменной
-        target_column = st.selectbox("Выберите целевую переменную", data.columns)
-        X = data.drop(columns=[target_column])
-        y = data[target_column]
+        # Загрузка файла
+        uploaded_file = st.file_uploader("Загрузите данные (CSV)", type=["csv"])
+        if uploaded_file is not None:
+            data = pd.read_csv(uploaded_file)
+            st.write("Данные:")
+            st.write(data.head())
 
-        # обучение модели
-        if st.button("Обучить модель"):
-            params["train_data"] = data.to_dict(orient="list")
-            start_time = time.time()  # засекаем время обучения модели
+            # Выбор целевой переменной
+            target_column = st.selectbox("Выберите целевую переменную", data.columns)
+            X = data.drop(columns=[target_column])
+            y = data[target_column]
 
-            # проводим кросс-валидацию локально
-            if type_of_model == "Linear Regression":
-                model = Ridge(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
-            elif type_of_model == "CatBoost":
-                model = CatBoostRegressor(
-                    learning_rate=params["learning_rate"],
-                    depth=params["depth"],
-                    iterations=params["iterations"],
-                    l2_leaf_reg=params["l2_leaf_reg"],
-                    verbose=False)
+            # Обучение модели
+            if st.button("Обучить модель"):
+                params["train_data"] = data.to_dict(orient="list")
+                start_time = time.time()  # Засекаем время обучения модели
 
-            st.write("Кросс-валидация началась")
-            kf = KFold(n_splits=5, shuffle=True, random_state=42)
-            fold_results = []
+                # Проводим кросс-валидацию локально
+                if type_of_model == "Ridge Classifier":
+                    model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
+                elif type_of_model == "CatBoost Classifier":
+                    model = CatBoostClassifier(
+                        learning_rate=params["learning_rate"],
+                        depth=params["depth"],
+                        iterations=params["iterations"],
+                        l2_leaf_reg=params["l2_leaf_reg"],
+                        verbose=False)
 
-            for train_index, test_index in kf.split(X):
-                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+                st.write("Кросс-валидация началась")
+                kf = KFold(n_splits=5, shuffle=True, random_state=42)
+                fold_results = []
 
-                model.fit(X_train, y_train)
-                predictions = model.predict(X_test)
-                rmse = mean_squared_error(y_test, predictions, squared=False)
-                fold_results.append(rmse)
+                for train_index, test_index in kf.split(X):
+                    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+                    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-            mean_rmse = np.mean(fold_results)
-            std_rmse = np.std(fold_results)
+                    model.fit(X_train, y_train)
+                    predictions = model.predict(X_test)
+                    accuracy = accuracy_score(y_test, predictions)
+                    fold_results.append(accuracy)
 
-            end_time = time.time()
+                mean_accuracy = np.mean(fold_results)
+                std_accuracy = np.std(fold_results)
 
-            # обработка результата
-            st.success("Модель обучена!")
-            st.write(f"Время обучения составило: {end_time - start_time:.2f} сек")
-            st.write("Результаты кросс-валидации:")
-            st.write(pd.DataFrame({"Fold": range(1, 6), "RMSE": fold_results}))
-            st.write(f"Средний RMSE: {mean_rmse:.4f}")
-            st.write(f"Стандартное отклонение RMSE: {std_rmse:.4f}")
+                end_time = time.time()
 
-            # важность признаков для CatBoost
-            if type_of_model == "CatBoost":
-                feature_importances = model.get_feature_importance()
-                feature_importances_df = pd.DataFrame({
-                    "Feature": X.columns,
-                    "Importance": feature_importances
-                }).sort_values(by="Importance", ascending=False)
-                st.write("Важность признаков:")
-                st.bar_chart(feature_importances_df.set_index("Feature"))
+                # Обработка результата
+                st.success("Модель обучена!")
+                st.write(f"Время обучения составило: {end_time - start_time:.2f} сек")
+                st.write("Результаты кросс-валидации:")
+                st.write(pd.DataFrame({"Fold": range(1, 6), "Accuracy": fold_results}))
+                st.write(f"Средняя точность: {mean_accuracy:.4f}")
+                st.write(f"Стандартное отклонение точности: {std_accuracy:.4f}")
 
-elif page == "Информация о модели":
-    st.header("Информация о модели")
-    model_id = st.text_input("Введите ID модели для получения информации", value="model")
+                # Важность признаков для CatBoost
+                if type_of_model == "CatBoost Classifier":
+                    feature_importances = model.get_feature_importance()
+                    feature_importances_df = pd.DataFrame({
+                        "Feature": X.columns,
+                        "Importance": feature_importances
+                    }).sort_values(by="Importance", ascending=False)
+                    st.write("Важность признаков:")
+                    st.bar_chart(feature_importances_df.set_index("Feature"))
 
-    if st.button("Получить информацию о модели"):
-        model_info = api_client.get_model_info(model_id)
-        if model_info:
-            st.write("Информация о модели:")
-            st.json(model_info)
+    elif page == "Информация о модели":
+        st.header("Информация о модели")
+        
+        # Кнопка назад
+        if st.button("Назад"):
+            st.session_state.page = None  # Возвращаемся в главное меню
 
-            # важность признаков
-            if "feature_importances" in model_info:
-                st.write("Важность признаков:")
-                feature_importances = model_info["feature_importances"]
-                feature_importances_df = pd.DataFrame({
-                    "Feature": feature_importances.keys(),
-                    "Importance": feature_importances.values()
-                }).sort_values(by="Importance", ascending=False)
-                st.bar_chart(feature_importances_df.set_index("Feature"))
-        else:
-            st.error("Такой модельки нет, sorry :(")
+        model_id = st.text_input("Введите ID модели для получения информации", value="model")
+
+        if st.button("Получить информацию о модели"):
+            model_info = api_client.get_model_info(model_id)
+            if model_info:
+                st.write("Информация о модели:")
+                st.json(model_info)
+
+                # Важность признаков
+                if "feature_importances" in model_info:
+                    st.write("Важность признаков:")
+                    feature_importances = model_info["feature_importances"]
+                    feature_importances_df = pd.DataFrame({
+                        "Feature": feature_importances.keys(),
+                        "Importance": feature_importances.values()
+                    }).sort_values(by="Importance", ascending=False)
+                    st.bar_chart(feature_importances_df.set_index("Feature"))
+            else:
+                st.error("Такой модельки нет, sorry :(")
