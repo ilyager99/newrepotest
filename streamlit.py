@@ -51,7 +51,7 @@ if 'page' in st.session_state and st.session_state.page == "main_model_service":
             st.session_state.page = None  # Возвращаемся в главное меню
 
         # Типы модели
-        type_of_model = st.selectbox("Выберите модель", ["Ridge Classifier", "CatBoost Classifier"])
+        type_of_model = st.sidebar.radio("Выберите модель", ["Ridge Classifier", "CatBoost Classifier"])
 
         # Параметры моделей
         params = {"type_of_model": type_of_model}
