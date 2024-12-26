@@ -147,6 +147,3 @@ def model_info(api_client):
                 st.bar_chart(feature_importances_df.set_index("Feature"))
         else:
             st.error("Такой модельки нет, sorry :(")
-
-if __name__ == "__main__":
-    main()
