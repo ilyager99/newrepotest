@@ -119,7 +119,7 @@ if page == "Обучение модели":
 
 elif page == "Информация о модели":
     st.header("Информация о модели")
-    model_id = st.text_input("Введите ID модели для получения информации", value="default_model")
+    model_id = st.text_input("Введите ID модели для получения информации", value="model")
 
     if st.button("Получить информацию о модели"):
         model_info = api_client.get_model_info(model_id)
