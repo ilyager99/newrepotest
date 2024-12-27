@@ -29,10 +29,17 @@ api_client = ModelAPI(host, port)
 
 st.title("Модель по анализу данных")
 
-# Создание вертикального меню
+if 'page' not in st.session_state:
+    st.session_state.page = "🔄 Обучение модели"
+
+# Создание вертикального меню с кнопками
 st.sidebar.header("Навигация")
-page_options = ["🔄 Обучение модели", "ℹ️ Информация о модели", "🔮 Предсказания"]
-selected_page = st.sidebar.selectbox("Выберите страницу:", page_options)
+if st.sidebar.button("🔄 Обучение модели"):
+    st.session_state.page = "🔄 Обучение модели"
+if st.sidebar.button("ℹ️ Информация о модели"):
+    st.session_state.page = "ℹ️ Информация о модели"
+if st.sidebar.button("🔮 Предсказания"):
+    st.session_state.page = "🔮 Предсказания"
 
 # Переменные для хранения данных и моделей
 if 'uploaded_data' not in st.session_state:
@@ -45,7 +52,7 @@ if 'model_id' not in st.session_state:
 if 'models' not in st.session_state:
     st.session_state.models = {}  # Для хранения модели и её ID после обучения
 
-if selected_page == "🔄 Обучение модели":
+if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
 
     type_of_model = st.selectbox("Выберите модель", ["⚖️ Ridge Classifier", "🧠 CatBoost Classifier"])
@@ -143,7 +150,7 @@ if selected_page == "🔄 Обучение модели":
                 st.write("📈 Важность признаков:")
                 st.bar_chart(feature_importances_df.set_index("Feature"))
 
-elif selected_page == "🔮 Предсказания":
+elif st.session_state.page == "🔮 Предсказания":
     st.header("Предсказания на основе обученной модели")
 
     if st.session_state.uploaded_data is not None:
@@ -186,7 +193,7 @@ elif selected_page == "🔮 Предсказания":
         else:
             st.error("Данные не содержат столбца 'account_id'.")
 
-elif selected_page == "ℹ️ Информация о модели":
+elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
 
     model_id = st.text_input("Введите ID модели для получения информации", value="model")
