@@ -79,6 +79,7 @@ if st.session_state.page == "🔄 Обучение модели":
 
             st.subheader(f"Целевая переменная: {target_column}")
             st.write(y.value_counts())
+
         else:
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
             st.stop()
@@ -148,12 +149,14 @@ if st.session_state.page == "🔄 Обучение модели":
                 )
                 st.plotly_chart(fig)
 
+            # Визуализация важности признаков для CatBoost Classifier
             if type_of_model == "🧠 CatBoost Classifier":
                 feature_importances = model.get_feature_importance()
                 feature_importances_df = pd.DataFrame({
                     "Feature": X.columns,
                     "Importance": feature_importances
                 }).sort_values(by="Importance", ascending=False)
+
                 st.write("📈 Важность признаков для CatBoost Classifier:")
                 fig = go.Figure()
                 fig.add_trace(go.Bar(
