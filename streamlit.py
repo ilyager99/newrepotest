@@ -47,6 +47,9 @@ with col3:
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 
+if 'model' not in st.session_state:
+    st.session_state.model = None  # Для хранения модели после обучения
+
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
 
@@ -149,6 +152,7 @@ elif st.session_state.page == "🔮 Предсказания":
     if st.session_state.uploaded_data is not None:
         data = st.session_state.uploaded_data
         if 'account_id' in data.columns:
+            # Получаем уникальные account_id и даем пользователю выбрать
             account_ids = data['account_id'].unique()
             account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
 
@@ -167,7 +171,7 @@ elif st.session_state.page == "🔮 Предсказания":
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
                     # Проверяем, была ли обучена модель
-                    if 'model' in st.session_state:
+                    if 'model' in st.session_state and st.session_state.model is not None:
                         model = st.session_state['model']
                     else:
                         st.error("Модель не была обучена. Сначала обучите модель.")
