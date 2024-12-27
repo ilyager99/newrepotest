@@ -75,7 +75,7 @@ if st.session_state.page == "🔄 Обучение модели":
         st.write("Данные:")
         st.write(data.head())
 
-        # Устанавливаем целевую переменную
+        # Определение целевой переменной
         target_column = "radiant_win"
         if target_column in data.columns:
             X = data.drop(columns=[target_column])
@@ -87,27 +87,30 @@ if st.session_state.page == "🔄 Обучение модели":
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
             st.stop()
 
-        # Подготовка категориальных признаков для CatBoost
-        cat_features = []  # Список для хранения имен категориальных столбцов
-        for col in X.columns:
-            if X[col].dtype == 'object':
-                cat_features.append(col)
-                # Преобразуем категориальные значения в строковой формат
-                X[col] = X[col].astype(str)  # Это будет необходимо для CatBoost
+        # Преобразуем категориальные признаки
+        categorical_cols = X.select_dtypes(include=['object']).columns.tolist()
+        for col in categorical_cols:
+            # Проверяем наличие NaN и заменяем их на строку 'missing' или самую частую категорию
+            X[col] = X[col].fillna('missing')
 
-        # Обучение модели
+        # Обработка модели
         if st.button("🚀 Обучить модель"):
             start_time = time.time()
 
+            # Проводим кросс-валидацию локально
             if type_of_model == "⚖️ Ridge Classifier":
+                # Преобразуем категориальные данные в числовой формат, если требуется
+                X = pd.get_dummies(X, drop_first=True)  # One-hot encoding
+
                 model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
             elif type_of_model == "🧠 CatBoost Classifier":
+                # CatBoost может работать с категориальными данными
                 model = CatBoostClassifier(
                     learning_rate=params["learning_rate"],
                     depth=params["depth"],
                     iterations=params["iterations"],
                     l2_leaf_reg=params["l2_leaf_reg"],
-                    cat_features=cat_features,  # Указываем категориальные признаки
+                    cat_features=categorical_cols,  # Передаём категориальные признаки напрямую
                     verbose=False
                 )
 
