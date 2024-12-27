@@ -148,6 +148,14 @@ if st.session_state.page == "🔄 Обучение модели":
 elif st.session_state.page == "🔮 Предсказания":
     st.header("Предсказания на основе обученной модели")
 
+    # Получение списка обученных моделей
+    models_list = api_client.list_models()
+    if models_list:
+        selected_model_id = st.selectbox("Выберите обученную модель", options=models_list)
+    else:
+        st.error("Нет доступных моделей для предсказаний.")
+        st.stop()
+
     if st.session_state.uploaded_data is not None:
         data = st.session_state.uploaded_data
 
@@ -172,20 +180,21 @@ elif st.session_state.page == "🔮 Предсказания":
                         le = LabelEncoder()
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
-                    # Проверяем, была ли обучена модель
-                    if st.session_state.models:
-                        model = st.session_state.models[st.session_state['model_id']]
-                    else:
-                        st.error("Модель не была обучена. Сначала обучите модель.")
-                        st.stop()
+                    # Проверяем, была ли выбрана модель
+                    if selected_model_id:
+                        # Вытаскиваем модель по ID
+                        model = st.session_state.models.get(selected_model_id)
+                        if not model:
+                            st.error("Выбранная модель не загружена. Сначала обучите модель.")
+                            st.stop()
+    
+                        # Получение предсказания
+                        if isinstance(model, CatBoostClassifier):
+                            probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
+                        else:  # Ridge Classifier
+                            probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-                    # Получение предсказания
-                    if isinstance(model, CatBoostClassifier):
-                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                    else:  # Ridge Classifier
-                        probability = model.predict(X_predict)  # Для Ridge использовать предсказание
-
-                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+                        st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
 
             st.write("Предсказания для команды Dire:")
             for account_id_input in account_id_dire:
@@ -200,23 +209,25 @@ elif st.session_state.page == "🔮 Предсказания":
                         le = LabelEncoder()
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
-                    # Проверяем, была ли обучена модель
-                    if st.session_state.models:
-                        model = st.session_state.models[st.session_state['model_id']]
-                    else:
-                        st.error("Модель не была обучена. Сначала обучите модель.")
-                        st.stop()
+                    # Проверяем, была ли выбрана модель
+                    if selected_model_id:
+                        # Вытаскиваем модель по ID
+                        model = st.session_state.models.get(selected_model_id)
+                        if not model:
+                            st.error("Выбранная модель не загружена. Сначала обучите модель.")
+                            st.stop()
 
-                    # Получение предсказания
-                    if isinstance(model, CatBoostClassifier):
-                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                    else:  # Ridge Classifier
-                        probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+                        # Получение предсказания
+                        if isinstance(model, CatBoostClassifier):
+                            probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
+                        else:  # Ridge Classifier
+                            probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+                        st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
 
     else:
         st.error("Данные не содержат столбца 'account_id'.")
+
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
