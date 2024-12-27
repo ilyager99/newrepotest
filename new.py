@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
-from sklearn.preprocessing import LabelEncoder, StandardScaler  # Импортируем StandardScaler
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
+from sklearn.preprocessing import LabelEncoder
 import plotly.graph_objects as go  # для визуализации
 
 class ModelAPI:
@@ -88,11 +88,6 @@ if st.session_state.page == "🔄 Обучение модели":
             params["train_data"] = data.to_dict(orient="list")
             start_time = time.time()
 
-            # Стандартизация данных для Ridge Classifier
-            if type_of_model == "⚖️ Ridge Classifier":
-                scaler = StandardScaler()  # Создаем экземпляр StandardScaler
-                X = scaler.fit_transform(X)  # Применяем стандартизацию
-
             if type_of_model == "⚖️ Ridge Classifier":
                 model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
             elif type_of_model == "🧠 CatBoost Classifier":
@@ -110,7 +105,7 @@ if st.session_state.page == "🔄 Обучение модели":
             roc_auc_results = []
 
             for train_index, test_index in kf.split(X):
-                X_train, X_test = X[train_index], X[test_index]
+                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
                 model.fit(X_train, y_train)
