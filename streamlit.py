@@ -33,13 +33,16 @@ st.title("Модель по анализу данных")
 if 'page' not in st.session_state:
     st.session_state.page = "🔄 Обучение модели"
 
-col1, col2 = st.sidebar.columns(2)
+col1, col2, col3 = st.sidebar.columns(3)
 with col1:
     if st.button("🔄 Обучение модели"):
         st.session_state.page = "🔄 Обучение модели"
 with col2:
     if st.button("ℹ️ Информация о модели"):
         st.session_state.page = "ℹ️ Информация о модели"
+with col3:
+    if st.button("📊 Предсказания"):
+        st.session_state.page = "📊 Предсказания"
 
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
@@ -153,3 +156,68 @@ elif st.session_state.page == "ℹ️ Информация о модели":
                 st.bar_chart(feature_importances_df.set_index("Feature"))
         else:
             st.error("❌ Такой модельки нет, sorry :(")
+
+elif st.session_state.page == "📊 Предсказания":
+    st.header("Предсказания")
+
+    uploaded_prediction_file = st.file_uploader("📤 Загрузите данные для предсказания (CSV)", type=["csv"])
+    model_id_selection = st.text_input("Введите ID модели для предсказания", value="model")
+
+    if uploaded_prediction_file is not None:
+        prediction_data = pd.read_csv(uploaded_prediction_file)
+        st.write("Данные для предсказания:")
+        st.write(prediction_data.head())
+
+        if 'account_id' in prediction_data.columns:
+            account_ids = prediction_data['account_id'].tolist()
+            st.write(f"Предсказания для account_id: {account_ids}")
+
+            # Подготовка данных
+            X_pred = prediction_data.drop(columns=['account_id'])
+            # Обработка категориальных переменных
+            categorical_cols = X_pred.select_dtypes(include=['object']).columns
+            for col in categorical_cols:
+                le = LabelEncoder()
+                X_pred[col] = le.fit_transform(X_pred[col].astype(str))
+
+            # Загрузка информации о модели
+            model_info = api_client.get_model_info(model_id_selection)
+            if model_info:
+                # Вариант 1: Использование API для предсказания
+                if model_info.get('deploy_status') == 'deployed':
+                    st.write("🚀 Выполняем предсказания через API...")
+                    response = requests.post(f"{api_client.base_url}/predict/{model_id_selection}", json=X_pred.to_dict(orient='records'))
+                    if response.ok:
+                        predictions = response.json().get('predictions')
+                        if predictions is not None:
+                            prediction_results = pd.DataFrame({
+                                'account_id': account_ids,
+                                'winning_probability': predictions
+                            })
+                            st.write("📊 Результаты предсказаний с использованием API:")
+                            st.write(prediction_results)
+                        else:
+                            st.error("❌ Предсказания не получены.")
+                    else:
+                        st.error("❌ Ошибка при выполнении запроса к API.")
+                else:
+                    # Вариант 2: Локальное предсказание
+                    st.write("🔄 Выполняем предсказания локально...")
+                    if model_info['type_of_model'] == 'CatBoost Classifier':
+                        model = CatBoostClassifier(**model_info['params'])
+                        model.load_model(model_id_selection)  # Загрузка модели
+                        predictions = model.predict_proba(X_pred)[:, 1]  # Вероятность для класса 1
+                    elif model_info['type_of_model'] == 'Ridge Classifier':
+                        model = RidgeClassifier(**model_info['params'])
+                        model.fit(X_pred, [0]*len(X_pred))  # Это временно, так как у нас нет обучающего набора
+                        predictions = model.predict_proba(X_pred)[:, 1]
+
+                    if predictions is not None:
+                        prediction_results = pd.DataFrame({
+                            'account_id': account_ids,
+                            'winning_probability': predictions
+                        })
+                        st.write("📊 Результаты предсказаний с использованием локальной модели:")
+                        st.write(prediction_results)
+            else:
+                st.error("❌ Модель с заданным ID не найдена.")
