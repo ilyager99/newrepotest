@@ -112,7 +112,12 @@ if st.session_state.page == "🔄 Обучение модели":
                 predictions = model.predict(X_test)
                 accuracy = accuracy_score(y_test, predictions)
                 f1 = f1_score(y_test, predictions)
-                roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+                
+                # Для RidgeClassifier используем decision_function для ROC AUC
+                if type_of_model == "⚖️ Ridge Classifier":
+                    roc_auc = roc_auc_score(y_test, model.decision_function(X_test))
+                else:  # Для CatBoost используем predict_proba
+                    roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
 
                 fold_results.append(accuracy)
                 f1_results.append(f1)
