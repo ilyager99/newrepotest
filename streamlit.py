@@ -33,6 +33,9 @@ st.title("Модель по анализу данных")
 if 'page' not in st.session_state:
     st.session_state.page = "🔄 Обучение модели"
 
+if 'train_data' not in st.session_state:
+    st.session_state.train_data = None  # Для хранения обученных данных
+
 col1, col2, col3 = st.sidebar.columns(3)
 with col1:
     if st.button("🔄 Обучение модели"):
@@ -66,6 +69,7 @@ if st.session_state.page == "🔄 Обучение модели":
     
     if uploaded_file is not None:
         data = pd.read_csv(uploaded_file)
+        st.session_state.train_data = data  # Сохранение обученных данных в сессии
         st.write("Данные:")
         st.write(data.head())
 
@@ -160,12 +164,11 @@ elif st.session_state.page == "ℹ️ Информация о модели":
 elif st.session_state.page == "📊 Предсказания":
     st.header("Предсказания")
 
-    uploaded_prediction_file = st.file_uploader("📤 Загрузите данные для предсказания (CSV)", type=["csv"])
     model_id_selection = st.text_input("Введите ID модели для предсказания", value="model")
 
-    if uploaded_prediction_file is not None:
-        prediction_data = pd.read_csv(uploaded_prediction_file)
-        st.write("Данные для предсказания:")
+    if st.session_state.train_data is not None:
+        prediction_data = st.session_state.train_data
+        st.write("Данные для предсказания (из обученного файла):")
         st.write(prediction_data.head())
 
         if 'account_id' in prediction_data.columns:
@@ -209,7 +212,9 @@ elif st.session_state.page == "📊 Предсказания":
                         predictions = model.predict_proba(X_pred)[:, 1]  # Вероятность для класса 1
                     elif model_info['type_of_model'] == 'Ridge Classifier':
                         model = RidgeClassifier(**model_info['params'])
-                        model.fit(X_pred, [0]*len(X_pred))  # Это временно, так как у нас нет обучающего набора
+                        # Обработка fit для временной модели
+                        model.fit(X_pred, [0]*len(X_pred))  # Поскольку нет y для предсказаний, загружаем временно
+
                         predictions = model.predict_proba(X_pred)[:, 1]
 
                     if predictions is not None:
@@ -221,3 +226,5 @@ elif st.session_state.page == "📊 Предсказания":
                         st.write(prediction_results)
             else:
                 st.error("❌ Модель с заданным ID не найдена.")
+    else:
+        st.error("❌ Сначала обучите модель и загрузите данные.")
