@@ -95,6 +95,7 @@ if st.session_state.page == "🔄 Обучение модели":
             params["train_data"] = data.to_dict(orient="list")
             start_time = time.time()
 
+            # Создание и обучение модели
             if type_of_model == "⚖️ Ridge Classifier":
                 model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
             elif type_of_model == "🧠 CatBoost Classifier":
@@ -130,6 +131,9 @@ if st.session_state.page == "🔄 Обучение модели":
             st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
             st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
 
+            # Сохраняем модель в состоянии сессии
+            st.session_state['model'] = model
+
             if type_of_model == "🧠 CatBoost Classifier":
                 feature_importances = model.get_feature_importance()
                 feature_importances_df = pd.DataFrame({
@@ -145,19 +149,16 @@ elif st.session_state.page == "🔮 Предсказания":
     if st.session_state.uploaded_data is not None:
         data = st.session_state.uploaded_data
         if 'account_id' in data.columns:
-            # Получаем уникальные account_id и даем пользователю выбрать
             account_ids = data['account_id'].unique()
             account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
 
             if st.button("🔮 Получить предсказание"):
-                # Фильтруем данные согласно выбранному account_id
                 account_data = data[data['account_id'] == account_id_input]
 
                 if account_data.empty:
                     st.error(f"Нет данных для Account ID {account_id_input}.")
                 else:
-                    # получение подмножества признаков для предсказания
-                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
+                    X_predict = account_data.drop(columns=['radiant_win'])
                     
                     # Обработка категориальных переменных
                     categorical_cols = X_predict.select_dtypes(include=['object']).columns
@@ -165,7 +166,7 @@ elif st.session_state.page == "🔮 Предсказания":
                         le = LabelEncoder()
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
-                    # Проверяем, какая модель была обучена, и делаем предсказание
+                    # Проверяем, была ли обучена модель
                     if 'model' in st.session_state:
                         model = st.session_state['model']
                     else:
