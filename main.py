@@ -93,61 +93,70 @@ if st.session_state.page == "🔄 Обучение модели":
             X[col] = X[col].fillna('missing')
 
         # Обработка модели
-        if st.button("🚀 Обучить модель"):
-            start_time = time.time()
+if st.button("🚀 Обучить модель"):
+    start_time = time.time()
 
-            # Проводим кросс-валидацию локально
-            if type_of_model == "⚖️ Ridge Classifier":
-                # Преобразуем категориальные данные в числовой формат, если требуется
-                X = pd.get_dummies(X, drop_first=True)  # One-hot encoding
+    # Проверка на NaN и бесконечные значения
+    if data.isnull().values.any() or np.isinf(data.values).any():
+        st.error("❌ Данные содержат NaN или бесконечные значения. Пожалуйста, очистите данные.")
+        st.stop()
 
-                model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
-            elif type_of_model == "🧠 CatBoost Classifier":
-                # CatBoost может работать с категориальными данными
-                model = CatBoostClassifier(
-                    learning_rate=params["learning_rate"],
-                    depth=params["depth"],
-                    iterations=params["iterations"],
-                    l2_leaf_reg=params["l2_leaf_reg"],
-                    cat_features=categorical_cols,  # Передаём категориальные признаки напрямую
-                    verbose=False
-                )
+    # Проводим кросс-валидацию локально
+    if type_of_model == "⚖️ Ridge Classifier":
+        # Преобразуем категориальные данные в числовой формат с использованием one-hot encoding
+        X = pd.get_dummies(X, drop_first=True)  # One-hot encoding
+        
+        # Проверка на особенности в данных
+        if X.shape[1] >= len(y):
+            st.error("❌ Количество признаков больше или равно количеству наблюдений. Пожалуйста, уменьшите количество признаков.")
+            st.stop()
 
-            st.write("Кросс-валидация началась")
-            kf = KFold(n_splits=5, shuffle=True, random_state=42)
-            fold_results = []
+        model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
+    elif type_of_model == "🧠 CatBoost Classifier":
+        # CatBoost может работать с категориальными данными
+        model = CatBoostClassifier(
+            learning_rate=params["learning_rate"],
+            depth=params["depth"],
+            iterations=params["iterations"],
+            l2_leaf_reg=params["l2_leaf_reg"],
+            cat_features=categorical_cols,  # Передаём категориальные признаки напрямую
+            verbose=False
+        )
 
-            for train_index, test_index in kf.split(X):
-                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    st.write("Кросс-валидация началась")
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    fold_results = []
 
-                model.fit(X_train, y_train)
-                predictions = model.predict(X_test)
-                accuracy = accuracy_score(y_test, predictions)
-                fold_results.append(accuracy)
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-            mean_accuracy = np.mean(fold_results)
-            std_accuracy = np.std(fold_results)
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        accuracy = accuracy_score(y_test, predictions)
+        fold_results.append(accuracy)
 
-            end_time = time.time()
+    mean_accuracy = np.mean(fold_results)
+    std_accuracy = np.std(fold_results)
 
-            st.success("✅ Модель обучена!")
-            st.write(f"⏳ Время обучения составило: {end_time - start_time:.2f} сек")
-            st.write("📊 Результаты кросс-валидации:")
-            st.write(pd.DataFrame({"Fold": range(1, 6), "Accuracy": fold_results}))
-            st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
-            st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
+    end_time = time.time()
 
-            # Важность признаков для CatBoost
-            if type_of_model == "🧠 CatBoost Classifier":
-                feature_importances = model.get_feature_importance()
-                feature_importances_df = pd.DataFrame({
-                    "Feature": X.columns,
-                    "Importance": feature_importances
-                }).sort_values(by="Importance", ascending=False)
-                st.write("📈 Важность признаков:")
-                st.bar_chart(feature_importances_df.set_index("Feature"))
+    st.success("✅ Модель обучена!")
+    st.write(f"⏳ Время обучения составило: {end_time - start_time:.2f} сек")
+    st.write("📊 Результаты кросс-валидации:")
+    st.write(pd.DataFrame({"Fold": range(1, 6), "Accuracy": fold_results}))
+    st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
+    st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
 
+    # Важность признаков для CatBoost
+    if type_of_model == "🧠 CatBoost Classifier":
+        feature_importances = model.get_feature_importance()
+        feature_importances_df = pd.DataFrame({
+            "Feature": X.columns,
+            "Importance": feature_importances
+        }).sort_values(by="Importance", ascending=False)
+        st.write("📈 Важность признаков:")
+        st.bar_chart(feature_importances_df.set_index("Feature"))
 # Страница "Информация о модели"
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
