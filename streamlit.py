@@ -50,6 +50,9 @@ if 'uploaded_data' not in st.session_state:
 if 'model' not in st.session_state:
     st.session_state.model = None  # Для хранения модели после обучения
 
+if 'model_id' not in st.session_state:
+    st.session_state.model_id = None  # Для хранения ID модели
+
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
 
@@ -134,8 +137,9 @@ if st.session_state.page == "🔄 Обучение модели":
             st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
             st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
 
-            # Сохраняем модель в состоянии сессии
+            # Сохраняем модель и model_id в состоянии сессии
             st.session_state['model'] = model
+            st.session_state['model_id'] = params["model_id"]
 
             if type_of_model == "🧠 CatBoost Classifier":
                 feature_importances = model.get_feature_importance()
@@ -178,7 +182,7 @@ elif st.session_state.page == "🔮 Предсказания":
                         st.stop()
 
                     # Получение предсказания
-                    if model_id == "🧠 CatBoost Classifier":
+                    if st.session_state.model_id == "🧠 CatBoost Classifier":
                         probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы
                     else:  # Ridge Classifier
                         probability = model.decision_function(X_predict)
