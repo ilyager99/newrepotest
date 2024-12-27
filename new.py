@@ -8,7 +8,7 @@ from sklearn.metrics import accuracy_score
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
 from sklearn.preprocessing import LabelEncoder
-import plotly.graph_objects as go  # добавлено для визуализации
+import plotly.graph_objects as go  # для визуализации
 
 class ModelAPI:
     def __init__(self, host: str, port: int):
@@ -123,23 +123,29 @@ if st.session_state.page == "🔄 Обучение модели":
             st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
             st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
 
-            # Визуализация средней точности и стандартного отклонения
-            # Создаем график
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                x=["Средняя точность", "Стандартное отклонение"],
-                y=[mean_accuracy, std_accuracy],
-                marker_color=['blue', 'orange'],
-            ))
+            # График для Ridge Classifier
+            if type_of_model == "⚖️ Ridge Classifier":
+                # Визуализация важности признаков
+                importance = np.abs(model.coef_[0])
+                feature_importances_df = pd.DataFrame({
+                    "Feature": X.columns,
+                    "Importance": importance
+                }).sort_values(by="Importance", ascending=False)
 
-            # Настройки графика
-            fig.update_layout(
-                title='📊 Средняя точность и стандартное отклонение',
-                xaxis_title='Метрики',
-                yaxis_title='Значения',
-                yaxis_tickformat='.2f'
-            )
-            st.plotly_chart(fig)
+                st.write("📈 Важность признаков для Ridge Classifier:")
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=feature_importances_df["Feature"],
+                    y=feature_importances_df["Importance"],
+                    marker_color='blue'
+                ))
+
+                fig.update_layout(
+                    title='Важность признаков для Ridge Classifier',
+                    xaxis_title='Признаки',
+                    yaxis_title='Важность',
+                )
+                st.plotly_chart(fig)
 
             if type_of_model == "🧠 CatBoost Classifier":
                 feature_importances = model.get_feature_importance()
@@ -147,8 +153,20 @@ if st.session_state.page == "🔄 Обучение модели":
                     "Feature": X.columns,
                     "Importance": feature_importances
                 }).sort_values(by="Importance", ascending=False)
-                st.write("📈 Важность признаков:")
-                st.bar_chart(feature_importances_df.set_index("Feature"))
+                st.write("📈 Важность признаков для CatBoost Classifier:")
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    x=feature_importances_df["Feature"],
+                    y=feature_importances_df["Importance"],
+                    marker_color='orange'
+                ))
+
+                fig.update_layout(
+                    title='Важность признаков для CatBoost Classifier',
+                    xaxis_title='Признаки',
+                    yaxis_title='Важность',
+                )
+                st.plotly_chart(fig)
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
