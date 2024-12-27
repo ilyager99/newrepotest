@@ -79,18 +79,23 @@ if st.session_state.page == "🔄 Обучение модели":
         if target_column in data.columns:
             X = data.drop(columns=[target_column])
             y = data[target_column]
-            
+
             st.subheader(f"Целевая переменная: {target_column}")
             st.write(y.value_counts())
         else:
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
             st.stop()
 
+        # Проверка уникальных значений в целевой переменной
+        unique_values = y.unique()
+        st.write("Уникальные значения целевой переменной:")
+        st.write(unique_values)
+        st.write("Количество уникальных значений:", len(unique_values))
+
         # Преобразуем категориальные признаки
         categorical_cols = X.select_dtypes(include=['object']).columns.tolist()
         for col in categorical_cols:
-            # Проверяем наличие NaN и заменяем их на строку 'missing' или самую частую категорию
-            X[col] = X[col].fillna('missing')
+            X[col] = X[col].fillna('missing')  # Филлы пропуски
 
         # Обработка модели
         if st.button("🚀 Обучить модель"):
@@ -98,18 +103,15 @@ if st.session_state.page == "🔄 Обучение модели":
 
             # Проводим кросс-валидацию локально
             if type_of_model == "⚖️ Ridge Classifier":
-                # Преобразуем категориальные данные в числовой формат, если требуется
                 X = pd.get_dummies(X, drop_first=True)  # One-hot encoding
-
                 model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
             elif type_of_model == "🧠 CatBoost Classifier":
-                # CatBoost может работать с категориальными данными
                 model = CatBoostClassifier(
                     learning_rate=params["learning_rate"],
                     depth=params["depth"],
                     iterations=params["iterations"],
                     l2_leaf_reg=params["l2_leaf_reg"],
-                    cat_features=categorical_cols,  # Передаём категориальные признаки напрямую
+                    cat_features=categorical_cols, 
                     verbose=False
                 )
 
@@ -123,6 +125,10 @@ if st.session_state.page == "🔄 Обучение модели":
 
                 model.fit(X_train, y_train)
                 predictions = model.predict(X_test)
+
+                # Выводим предсказания и истинные значения для отладки
+                st.write(f"Предсказания: {predictions}, Истинные значения: {y_test.to_numpy()}")
+
                 accuracy = accuracy_score(y_test, predictions)
                 fold_results.append(accuracy)
 
