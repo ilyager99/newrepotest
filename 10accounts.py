@@ -19,7 +19,7 @@ class ModelAPI:
         return response.json()
 
     def get_model_info(self, model_id: str):
-        """Получение информации об обученной модели."""
+        """Получение информации об обученной модели.""" 
         response = requests.get(f"{self.base_url}/info/{model_id}")
         return response.json()
 
@@ -151,77 +151,72 @@ elif st.session_state.page == "🔮 Предсказания":
     if st.session_state.uploaded_data is not None:
         data = st.session_state.uploaded_data
 
-        if 'account_id' in data.columns:
-            # Проверяем, существует ли столбец 'team'
-            if 'team' in data.columns:
-                # Получаем уникальные account_id и даем пользователю выбрать
-                radiant_ids = data[data['team'] == 'Radiant']['account_id'].unique()
-                dire_ids = data[data['team'] == 'Dire']['account_id'].unique()
+        # Получаем уникальные account_id и даем пользователю выбрать
+        radiant_ids = data[data['isRadiant'] == True]['account_id'].unique()
+        dire_ids = data[data['isRadiant'] == False]['account_id'].unique()
 
-                account_id_radiant = st.multiselect("Выберите Account ID для Radiant", radiant_ids)
-                account_id_dire = st.multiselect("Выберите Account ID для Dire", dire_ids)
+        account_id_radiant = st.multiselect("Выберите Account ID для Radiant", radiant_ids)
+        account_id_dire = st.multiselect("Выберите Account ID для Dire", dire_ids)
 
-                if st.button("🔮 Получить предсказания"):
-                    st.write("Предсказания для команды Radiant:")
-                    for account_id_input in account_id_radiant:
-                        account_data = data[data['account_id'] == account_id_input]
-                        if account_data.empty:
-                            st.error(f"Нет данных для Account ID {account_id_input} (Radiant).")
-                        else:
-                            X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
-                            # Обработка категориальных переменных
-                            categorical_cols = X_predict.select_dtypes(include=['object']).columns
-                            for col in categorical_cols:
-                                le = LabelEncoder()
-                                X_predict[col] = le.fit_transform(X_predict[col].astype(str))
+        if st.button("🔮 Получить предсказания"):
+            st.write("Предсказания для команды Radiant:")
+            for account_id_input in account_id_radiant:
+                account_data = data[data['account_id'] == account_id_input]
+                if account_data.empty:
+                    st.error(f"Нет данных для Account ID {account_id_input} (Radiant).")
+                else:
+                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
+                    # Обработка категориальных переменных
+                    categorical_cols = X_predict.select_dtypes(include=['object']).columns
+                    for col in categorical_cols:
+                        le = LabelEncoder()
+                        X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
-                            # Проверяем, была ли обучена модель
-                            if st.session_state.models:
-                                model = st.session_state.models[st.session_state['model_id']]
-                            else:
-                                st.error("Модель не была обучена. Сначала обучите модель.")
-                                st.stop()
+                    # Проверяем, была ли обучена модель
+                    if st.session_state.models:
+                        model = st.session_state.models[st.session_state['model_id']]
+                    else:
+                        st.error("Модель не была обучена. Сначала обучите модель.")
+                        st.stop()
 
-                            # Получение предсказания
-                            if isinstance(model, CatBoostClassifier):
-                                probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                            else:  # Ridge Classifier
-                                probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+                    # Получение предсказания
+                    if isinstance(model, CatBoostClassifier):
+                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
+                    else:  # Ridge Classifier
+                        probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-                            st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
 
-                    st.write("Предсказания для команды Dire:")
-                    for account_id_input in account_id_dire:
-                        account_data = data[data['account_id'] == account_id_input]
-                        if account_data.empty:
-                            st.error(f"Нет данных для Account ID {account_id_input} (Dire).")
-                        else:
-                            X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
-                            # Обработка категориальных переменных
-                            categorical_cols = X_predict.select_dtypes(include=['object']).columns
-                            for col in categorical_cols:
-                                le = LabelEncoder()
-                                X_predict[col] = le.fit_transform(X_predict[col].astype(str))
+            st.write("Предсказания для команды Dire:")
+            for account_id_input in account_id_dire:
+                account_data = data[data['account_id'] == account_id_input]
+                if account_data.empty:
+                    st.error(f"Нет данных для Account ID {account_id_input} (Dire).")
+                else:
+                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
+                    # Обработка категориальных переменных
+                    categorical_cols = X_predict.select_dtypes(include=['object']).columns
+                    for col in categorical_cols:
+                        le = LabelEncoder()
+                        X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
-                            # Проверяем, была ли обучена модель
-                            if st.session_state.models:
-                                model = st.session_state.models[st.session_state['model_id']]
-                            else:
-                                st.error("Модель не была обучена. Сначала обучите модель.")
-                                st.stop()
+                    # Проверяем, была ли обучена модель
+                    if st.session_state.models:
+                        model = st.session_state.models[st.session_state['model_id']]
+                    else:
+                        st.error("Модель не была обучена. Сначала обучите модель.")
+                        st.stop()
 
-                            # Получение предсказания
-                            if isinstance(model, CatBoostClassifier):
-                                probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                            else:  # Ridge Classifier
-                                probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+                    # Получение предсказания
+                    if isinstance(model, CatBoostClassifier):
+                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
+                    else:  # Ridge Classifier
+                        probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-                            st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
-            else:
-                st.error("Данные не содержат столбца 'team'. Используйте другую команду для фильтрации.")
+                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
 
-        else:
-            st.error("Данные не содержат столбца 'account_id'.")
+    else:
+        st.error("Данные не содержат столбца 'account_id'.")
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
