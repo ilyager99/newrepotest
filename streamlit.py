@@ -29,21 +29,11 @@ api_client = ModelAPI(host, port)
 
 st.title("Модель по анализу данных")
 
-if 'page' not in st.session_state:
-    st.session_state.page = "🔄 Обучение модели"
+# Создание вертикального меню
+st.sidebar.header("Навигация")
+page_options = ["🔄 Обучение модели", "ℹ️ Информация о модели", "🔮 Предсказания"]
+selected_page = st.sidebar.selectbox("Выберите страницу:", page_options)
 
-col1, col2, col3 = st.sidebar.columns(3)
-with col1:
-    if st.button("🔄 Обучение модели"):
-        st.session_state.page = "🔄 Обучение модели"
-with col2:
-    if st.button("ℹ️ Информация о модели"):
-        st.session_state.page = "ℹ️ Информация о модели"
-with col3:
-    if st.button("🔮 Предсказания"):
-        st.session_state.page = "🔮 Предсказания"
-
-# Переменная для хранения загруженных данных
 # Переменные для хранения данных и моделей
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
@@ -55,7 +45,7 @@ if 'model_id' not in st.session_state:
 if 'models' not in st.session_state:
     st.session_state.models = {}  # Для хранения модели и её ID после обучения
 
-if st.session_state.page == "🔄 Обучение модели":
+if selected_page == "🔄 Обучение модели":
     st.header("Обучение модели")
 
     type_of_model = st.selectbox("Выберите модель", ["⚖️ Ridge Classifier", "🧠 CatBoost Classifier"])
@@ -153,7 +143,7 @@ if st.session_state.page == "🔄 Обучение модели":
                 st.write("📈 Важность признаков:")
                 st.bar_chart(feature_importances_df.set_index("Feature"))
 
-elif st.session_state.page == "🔮 Предсказания":
+elif selected_page == "🔮 Предсказания":
     st.header("Предсказания на основе обученной модели")
 
     if st.session_state.uploaded_data is not None:
@@ -180,8 +170,6 @@ elif st.session_state.page == "🔮 Предсказания":
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
                     # Проверяем, была ли обучена модель
-                    if 'model' in st.session_state and st.session_state.model is not None:
-                        model = st.session_state['model']
                     if model_id_input in st.session_state.models:
                         model = st.session_state.models[model_id_input]
                     else:
@@ -198,7 +186,7 @@ elif st.session_state.page == "🔮 Предсказания":
         else:
             st.error("Данные не содержат столбца 'account_id'.")
 
-elif st.session_state.page == "ℹ️ Информация о модели":
+elif selected_page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
 
     model_id = st.text_input("Введите ID модели для получения информации", value="model")
