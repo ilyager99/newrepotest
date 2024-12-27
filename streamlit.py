@@ -189,7 +189,7 @@ elif st.session_state.page == "🔮 Предсказания":
                     else:  # Ridge Classifier
                         probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-                    st.write(f"Алена в новом году будет самой счастливой девушкой {account_id_input}: {probability[0]:.2f}")
+                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
         else:
             st.error("Данные не содержат столбца 'account_id'.")
 
