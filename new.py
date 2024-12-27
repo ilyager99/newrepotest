@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
 from sklearn.preprocessing import LabelEncoder
@@ -101,6 +101,8 @@ if st.session_state.page == "🔄 Обучение модели":
             st.write("Кросс-валидация началась")
             kf = KFold(n_splits=5, shuffle=True, random_state=42)
             fold_results = []
+            f1_results = []
+            roc_auc_results = []
 
             for train_index, test_index in kf.split(X):
                 X_train, X_test = X.iloc[train_index], X.iloc[test_index]
@@ -109,19 +111,36 @@ if st.session_state.page == "🔄 Обучение модели":
                 model.fit(X_train, y_train)
                 predictions = model.predict(X_test)
                 accuracy = accuracy_score(y_test, predictions)
+                f1 = f1_score(y_test, predictions)
+                roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
+
                 fold_results.append(accuracy)
+                f1_results.append(f1)
+                roc_auc_results.append(roc_auc)
 
             mean_accuracy = np.mean(fold_results)
             std_accuracy = np.std(fold_results)
+
+            mean_f1 = np.mean(f1_results)
+            std_f1 = np.std(f1_results)
+
+            mean_roc_auc = np.mean(roc_auc_results)
+            std_roc_auc = np.std(roc_auc_results)
 
             end_time = time.time()
 
             st.success("✅ Модель обучена!")
             st.write(f"⏳ Время обучения составило: {end_time - start_time:.2f} сек")
             st.write("📊 Результаты кросс-валидации:")
-            st.write(pd.DataFrame({"Fold": range(1, 6), "Accuracy": fold_results}))
+            st.write(pd.DataFrame({"Fold": range(1, 6), "Accuracy": fold_results,
+                                    "F1 Score": f1_results, "ROC AUC": roc_auc_results}))
+
             st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
             st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
+            st.write(f"🏆 Среднее значение F1 Score: {mean_f1:.4f}")
+            st.write(f"📉 Стандартное отклонение F1 Score: {std_f1:.4f}")
+            st.write(f"🏆 Среднее значение ROC AUC: {mean_roc_auc:.4f}")
+            st.write(f"📉 Стандартное отклонение ROC AUC: {std_roc_auc:.4f}")
 
             # Визуализация важности признаков для Ridge Classifier
             if type_of_model == "⚖️ Ridge Classifier":
