@@ -43,6 +43,10 @@ with col3:
     if st.button("🔮 Предсказания"):
         st.session_state.page = "🔮 Предсказания"
 
+# Переменная для хранения загруженных данных
+if 'uploaded_data' not in st.session_state:
+    st.session_state.uploaded_data = None
+
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
 
@@ -65,6 +69,7 @@ if st.session_state.page == "🔄 Обучение модели":
     
     if uploaded_file is not None:
         data = pd.read_csv(uploaded_file)
+        st.session_state.uploaded_data = data  # Сохраняем загруженные данные в состоянии сессии
         st.write("Данные:")
         st.write(data.head())
 
@@ -137,26 +142,26 @@ if st.session_state.page == "🔄 Обучение модели":
 elif st.session_state.page == "🔮 Предсказания":
     st.header("Предсказания на основе обученной модели")
 
-    model_id = st.text_input("Введите ID обученной модели для предсказания")
-    account_id_input = st.text_input("Введите Account ID для предсказания", value="")
-
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        
+    if st.session_state.uploaded_data is not None:
+        data = st.session_state.uploaded_data
         if 'account_id' in data.columns:
-            account_data = data[data['account_id'] == account_id_input]
+            # Получаем уникальные account_id и даем пользователю выбрать
+            account_ids = data['account_id'].unique()
+            account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
 
-        if st.button("🔮 Получить предсказание"):
-            if model_id and account_id_input:
+            if st.button("🔮 Получить предсказание"):
+                # Фильтруем данные согласно выбранному account_id
+                account_data = data[data['account_id'] == account_id_input]
+
                 if account_data.empty:
                     st.error(f"Нет данных для Account ID {account_id_input}.")
                 else:
                     # получение подмножества признаков для предсказания
                     X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
                     
-                    # Обработка категориальных переменных: необходимо,
-                    # чтобы они были представлены в том же виде, что и во время обучения
-                    for col in X_predict.select_dtypes(include=['object']).columns:
+                    # Обработка категориальных переменных
+                    categorical_cols = X_predict.select_dtypes(include=['object']).columns
+                    for col in categorical_cols:
                         le = LabelEncoder()
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
@@ -174,6 +179,8 @@ elif st.session_state.page == "🔮 Предсказания":
                         probability = model.decision_function(X_predict)
 
                     st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+        else:
+            st.error("Данные не содержат столбца 'account_id'.")
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
