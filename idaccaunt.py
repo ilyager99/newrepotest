@@ -70,11 +70,16 @@ if st.session_state.page == "🔄 Обучение модели":
             X = data.drop(columns=[target_column])
             y = data[target_column]
 
-            # Обработка категориальных переменных
+            # Обработка категориальных переменных (не используем LabelEncoder для CatBoost)
             categorical_cols = X.select_dtypes(include=['object']).columns
-            for col in categorical_cols:
-                le = LabelEncoder()
-                X[col] = le.fit_transform(X[col].astype(str))
+            
+            if type_of_model == "🧠 CatBoost Classifier":
+                # Вспомните, что CatBoost должен знать какие признаки категориальные
+                cat_features_indices = [X.columns.get_loc(col) for col in categorical_cols]
+            else:
+                for col in categorical_cols:
+                    le = LabelEncoder()
+                    X[col] = le.fit_transform(X[col].astype(str))
 
             st.subheader(f"Целевая переменная: {target_column}")
             st.write(y.value_counts())
@@ -107,6 +112,7 @@ if st.session_state.page == "🔄 Обучение модели":
                     depth=params["depth"],
                     iterations=params["iterations"],
                     l2_leaf_reg=params["l2_leaf_reg"],
+                    cat_features=cat_features_indices,  # Передаем индексы категориальных признаков
                     verbose=False)
 
             st.write("Кросс-валидация началась")
@@ -146,7 +152,11 @@ if st.session_state.page == "🔄 Обучение модели":
             # Новая функциональность для предсказания вероятности победы
             if account_data is not None and len(account_data) > 0:
                 account_features = account_data.drop(columns=[target_column])  # Убираем целевую переменную
-                probability = model.predict_proba(account_features)[:, 1]  # Получаем вероятность победы
+                if type_of_model == "⚖️ Ridge Classifier":
+                    probability = model.decision_function(account_features)
+                else:  # Для CatBoost используем predict_proba
+                    probability = model.predict_proba(account_features)[:, 1]
+                    
                 st.write(f"Вероятность победы для Account ID {selected_account_id}: {probability[0]:.2f}")
 
 elif st.session_state.page == "ℹ️ Информация о модели":
