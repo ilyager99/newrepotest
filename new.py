@@ -3,30 +3,27 @@ import requests
 import time
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score, classification_report, f1_score
+from sklearn.metrics import accuracy_score, classification_report
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+import plotly.express as px
 
 class ModelAPI:
     def __init__(self, host: str, port: int):
         self.base_url = f"{host}:{port}/api/v1/models"
 
     def fit_model(self, params: dict):
-        """Отправка параметров для обучения модели."""
         response = requests.post(f"{self.base_url}/fit", json=params)
         return response.json()
 
     def get_model_info(self, model_id: str):
-        """Получение информации об обученной модели."""
         response = requests.get(f"{self.base_url}/info/{model_id}")
         return response.json()
 
-host = "http://****"  # Замените на рабочий хост
-port = 8000          # Замените на рабочий порт
+host = "http://****" 
+port = 8000          
 api_client = ModelAPI(host, port)
 
 st.title("Модель по анализу данных")
@@ -52,7 +49,6 @@ if st.session_state.page == "🔄 Обучение модели":
     if type_of_model == "⚖️ Ridge Classifier":
         params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
         params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
-
     elif type_of_model == "🧠 CatBoost Classifier":
         params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
         params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
@@ -72,22 +68,11 @@ if st.session_state.page == "🔄 Обучение модели":
             X = data.drop(columns=[target_column])
             y = data[target_column]
 
-            # Обработка категориальных переменных
-            categorical_cols = X.select_dtypes(include=['object']).columns
-            for col in categorical_cols:
-                le = LabelEncoder()
-                X[col] = le.fit_transform(X[col].astype(str))
+            # Обработка категориальных переменных с использованием One-Hot Encoding
+            X = pd.get_dummies(X, drop_first=True)
 
             st.subheader(f"Целевая переменная: {target_column}")
             st.write(y.value_counts())
-
-            # Визуализация распределения целевой переменной
-            st.subheader(f"Гистограмма целевой переменной: {target_column}")
-            plt.figure(figsize=(10, 5))
-            sns.histplot(y, bins=30, kde=True)
-            plt.xlabel(target_column)
-            plt.ylabel('Количество')
-            st.pyplot(plt)
 
         else:
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
@@ -146,10 +131,16 @@ if st.session_state.page == "🔄 Обучение модели":
                     "Importance": feature_importances
                 }).sort_values(by="Importance", ascending=False)
 
-                plt.figure(figsize=(10, 5))
-                sns.barplot(x='Importance', y='Feature', data=feature_importances_df)
-                plt.title("Важность признаков")
-                st.pyplot(plt)
+                # Используем Plotly для интерактивной визуализации
+                fig = px.bar(
+                    feature_importances_df, 
+                    x='Importance', 
+                    y='Feature', 
+                    title="Важность признаков", 
+                    orientation='h', 
+                    labels={'Importance': 'Importance Score', 'Feature': 'Feature'}
+                )
+                st.plotly_chart(fig)
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
@@ -170,9 +161,14 @@ elif st.session_state.page == "ℹ️ Информация о модели":
                     "Importance": feature_importances.values()
                 }).sort_values(by="Importance", ascending=False)
 
-                plt.figure(figsize=(10, 5))
-                sns.barplot(x='Importance', y='Feature', data=feature_importances_df)
-                plt.title("Важность признаков")
-                st.pyplot(plt)
+                fig = px.bar(
+                    feature_importances_df, 
+                    x='Importance', 
+                    y='Feature', 
+                    title="Важность признаков", 
+                    orientation='h', 
+                    labels={'Importance': 'Importance Score', 'Feature': 'Feature'}
+                )
+                st.plotly_chart(fig)
         else:
             st.error("❌ Такой модельки нет, sorry :(")
