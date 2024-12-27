@@ -70,16 +70,16 @@ if st.session_state.page == "🔄 Обучение модели":
             X = data.drop(columns=[target_column])
             y = data[target_column]
 
-            # Обработка категориальных переменных (не используем LabelEncoder для CatBoost)
+            # Обработка категориальных переменных
             categorical_cols = X.select_dtypes(include=['object']).columns
             
             if type_of_model == "🧠 CatBoost Classifier":
-                # Вспомните, что CatBoost должен знать какие признаки категориальные
-                cat_features_indices = [X.columns.get_loc(col) for col in categorical_cols]
+                cat_features_indices = [X.columns.get_loc(col) for col in categorical_cols]  # Индексы категориальных признаков
+
             else:
                 for col in categorical_cols:
                     le = LabelEncoder()
-                    X[col] = le.fit_transform(X[col].astype(str))
+                    X[col] = le.fit_transform(X[col].astype(str))  # Преобразуем категориальные признаки в числовые
 
             st.subheader(f"Целевая переменная: {target_column}")
             st.write(y.value_counts())
