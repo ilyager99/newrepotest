@@ -166,7 +166,7 @@ elif st.session_state.page == "🔮 Предсказания":
                 if account_data.empty:
                     st.error(f"Нет данных для Account ID {account_id_input}.")
                 else:
-                    X_predict = account_data.drop(columns=['radiant_win'])
+                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
                     
                     # Обработка категориальных переменных
                     categorical_cols = X_predict.select_dtypes(include=['object']).columns
@@ -182,10 +182,10 @@ elif st.session_state.page == "🔮 Предсказания":
                         st.stop()
 
                     # Получение предсказания
-                    if st.session_state.model_id == "🧠 CatBoost Classifier":
-                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы
+                    if isinstance(model, CatBoostClassifier):
+                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
                     else:  # Ridge Classifier
-                        probability = model.decision_function(X_predict)
+                        probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
                     st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
         else:
