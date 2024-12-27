@@ -22,6 +22,11 @@ class ModelAPI:
         """Получение информации об обученной модели.""" 
         response = requests.get(f"{self.base_url}/info/{model_id}")
         return response.json()
+    
+    def list_models(self):
+        """Получение списка обученных моделей."""
+        response = requests.get(f"{self.base_url}/list")
+        return response.json()
 
 host = "http://****"  # Замените на рабочий хост
 port = 8000          # Замените на рабочий порт
