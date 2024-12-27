@@ -8,7 +8,6 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
-from sklearn.preprocessing import StandardScaler
 
 # Классы API
 class ModelAPI:
@@ -70,60 +69,39 @@ if st.session_state.page == "🔄 Обучение модели":
     params["model_id"] = st.text_input("Введите ID модели", value="model")
 
     # Загрузка файла
-    # Загрузка файла
-uploaded_file = st.file_uploader("📤 Загрузите данные (CSV)", type=["csv"])
-if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    st.write("Данные:")
-    st.write(data.head())
+    uploaded_file = st.file_uploader("📤 Загрузите данные (CSV)", type=["csv"])
+    if uploaded_file is not None:
+        data = pd.read_csv(uploaded_file)
+        st.write("Данные:")
+        st.write(data.head())
 
-    # Устанавливаем целевую переменную
-    target_column = "radiant_win"
-    if target_column in data.columns:
-        X = data.drop(columns=[target_column])
-        y = data[target_column]
-        
-        st.subheader(f"Целевая переменная: {target_column}")
-        st.write(y.value_counts())
-    else:
-        st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
-        st.stop()
-
-    # Приведение всех данных к числовым значениям
-    for col in X.columns:
-        if X[col].dtype == 'object':
-            # Заполнение модой для категориальных признаков
-            X[col].fillna(X[col].mode()[0], inplace=True)
+        # Устанавливаем целевую переменную
+        target_column = "radiant_win"
+        if target_column in data.columns:
+            X = data.drop(columns=[target_column])
+            y = data[target_column]
+            
+            st.subheader(f"Целевая переменная: {target_column}")
+            st.write(y.value_counts())
         else:
-            # Заполнение средним для числовых признаков
-            X[col].fillna(X[col].mean(), inplace=True)
+            st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
+            st.stop()
 
-    # Проверка на наличие бесконечных значений
-    if np.isinf(X).any():
-        st.error("Данные содержат бесконечные значения.")
-        st.stop()
+        # Подготовка категориальных признаков для CatBoost
+        cat_features = []  # Список для хранения имен категориальных столбцов
+        for col in X.columns:
+            if X[col].dtype == 'object':
+                cat_features.append(col)
+                # Преобразуем категориальные значения в строковой формат
+                X[col] = X[col].astype(str)  # Это будет необходимо для CatBoost
 
-    # Подготовка категориальных признаков для CatBoost
-    cat_features = []  # Список для хранения имен категориальных столбцов
-    for col in X.columns:
-        if X[col].dtype == 'object':
-            cat_features.append(col)
-            # Преобразуем категориальные значения в строковой формат
-            X[col] = X[col].astype(str)  # Это будет необходимо для CatBoost
         # Обучение модели
         if st.button("🚀 Обучить модель"):
             start_time = time.time()
 
             if type_of_model == "⚖️ Ridge Classifier":
-                # Преобразуем категориальные данные в числовой формат
-                X = pd.get_dummies(X, drop_first=True)  # One-hot encoding
-                # Нормализуем данные
-                scaler = StandardScaler()
-                X = scaler.fit_transform(X)
-
                 model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
             elif type_of_model == "🧠 CatBoost Classifier":
-                # CatBoost может работать с категориальными данными
                 model = CatBoostClassifier(
                     learning_rate=params["learning_rate"],
                     depth=params["depth"],
@@ -138,7 +116,7 @@ if uploaded_file is not None:
             fold_results = []
 
             for train_index, test_index in kf.split(X):
-                X_train, X_test = X[train_index], X[test_index]
+                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
                 model.fit(X_train, y_train)
