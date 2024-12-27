@@ -8,6 +8,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
+from sklearn.preprocessing import StandardScaler
 
 # Классы API
 class ModelAPI:
@@ -87,6 +88,11 @@ if st.session_state.page == "🔄 Обучение модели":
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
             st.stop()
 
+        # Проверка на наличие NaN и бесконечных значений
+        if X.isnull().sum().any() or np.isinf(X).any():
+            st.error("Данные содержат пропуски или бесконечные значения.")
+            st.stop()
+
         # Подготовка категориальных признаков для CatBoost
         cat_features = []  # Список для хранения имен категориальных столбцов
         for col in X.columns:
@@ -100,8 +106,15 @@ if st.session_state.page == "🔄 Обучение модели":
             start_time = time.time()
 
             if type_of_model == "⚖️ Ridge Classifier":
+                # Преобразуем категориальные данные в числовой формат
+                X = pd.get_dummies(X, drop_first=True)  # One-hot encoding
+                # Нормализуем данные
+                scaler = StandardScaler()
+                X = scaler.fit_transform(X)
+
                 model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
             elif type_of_model == "🧠 CatBoost Classifier":
+                # CatBoost может работать с категориальными данными
                 model = CatBoostClassifier(
                     learning_rate=params["learning_rate"],
                     depth=params["depth"],
@@ -116,7 +129,7 @@ if st.session_state.page == "🔄 Обучение модели":
             fold_results = []
 
             for train_index, test_index in kf.split(X):
-                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+                X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
                 model.fit(X_train, y_train)
