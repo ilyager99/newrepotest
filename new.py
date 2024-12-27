@@ -79,7 +79,6 @@ if st.session_state.page == "🔄 Обучение модели":
 
             st.subheader(f"Целевая переменная: {target_column}")
             st.write(y.value_counts())
-
         else:
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
             st.stop()
@@ -123,25 +122,27 @@ if st.session_state.page == "🔄 Обучение модели":
             st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
             st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
 
-            # График для Ridge Classifier
+            # Визуализация важности признаков для Ridge Classifier
             if type_of_model == "⚖️ Ridge Classifier":
-                # Визуализация важности признаков
                 importance = np.abs(model.coef_[0])
                 feature_importances_df = pd.DataFrame({
                     "Feature": X.columns,
                     "Importance": importance
                 }).sort_values(by="Importance", ascending=False)
 
-                st.write("📈 Важность признаков для Ridge Classifier:")
+                # Выбор только топ 12 признаков
+                top_features = feature_importances_df.head(12)
+
+                st.write("📈 Важность признаков для Ridge Classifier (Топ 12):")
                 fig = go.Figure()
                 fig.add_trace(go.Bar(
-                    x=feature_importances_df["Feature"],
-                    y=feature_importances_df["Importance"],
+                    x=top_features["Feature"],
+                    y=top_features["Importance"],
                     marker_color='blue'
                 ))
 
                 fig.update_layout(
-                    title='Важность признаков для Ridge Classifier',
+                    title='Важность признаков для Ridge Classifier (Топ 12)',
                     xaxis_title='Признаки',
                     yaxis_title='Важность',
                 )
