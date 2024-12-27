@@ -33,7 +33,7 @@ if 'page' not in st.session_state:
     st.session_state.page = "🔄 Обучение модели"
 
 # Создание вертикального меню с кнопками
-st.sidebar.header("Навигация")
+st.sidebar.header("Меню быстрого доступа")
 if st.sidebar.button("🔄 Обучение модели"):
     st.session_state.page = "🔄 Обучение модели"
 if st.sidebar.button("ℹ️ Информация о модели"):
@@ -189,7 +189,7 @@ elif st.session_state.page == "🔮 Предсказания":
                     else:  # Ridge Classifier
                         probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+                    st.write(f"Алена в новом году будет самой счастливой девушкой {account_id_input}: {probability[0]:.2f}")
         else:
             st.error("Данные не содержат столбца 'account_id'.")
 
