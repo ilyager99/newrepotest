@@ -8,10 +8,6 @@ from sklearn.metrics import accuracy_score
 from catboost import CatBoostClassifier
 from sklearn.linear_model import RidgeClassifier
 
-# Инициализация состояния для страницы
-if 'page' not in st.session_state:
-    st.session_state.page = "🔄 Обучение модели"  # Устанавливаем значение по умолчанию
-
 # Классы API
 class ModelAPI:
     def __init__(self, host: str, port: int):
@@ -32,6 +28,10 @@ api_client = ModelAPI(host, port)
 
 # Заголовок приложения
 st.title("Модель по анализу данных")
+
+# Инициализация состояния для страницы
+if 'page' not in st.session_state:
+    st.session_state.page = "🔄 Обучение модели"
 
 # Кнопки для навигации между страницами
 col1, col2 = st.sidebar.columns(2)
