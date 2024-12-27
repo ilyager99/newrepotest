@@ -71,35 +71,40 @@ if st.session_state.page == "🔄 Обучение модели":
 
     # Загрузка файла
     uploaded_file = st.file_uploader("📤 Загрузите данные (CSV)", type=["csv"])
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        st.write("Данные:")
-        st.write(data.head())
+if uploaded_file is not None:
+    data = pd.read_csv(uploaded_file)
+    st.write("Данные:")
+    st.write(data.head())
 
-        # Устанавливаем целевую переменную
-        target_column = "radiant_win"
-        if target_column in data.columns:
-            X = data.drop(columns=[target_column])
-            y = data[target_column]
-            
-            st.subheader(f"Целевая переменная: {target_column}")
-            st.write(y.value_counts())
-        else:
-            st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
-            st.stop()
+    # Устанавливаем целевую переменную
+    target_column = "radiant_win"
+    if target_column in data.columns:
+        X = data.drop(columns=[target_column])
+        y = data[target_column]
+        
+        st.subheader(f"Целевая переменная: {target_column}")
+        st.write(y.value_counts())
+    else:
+        st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
+        st.stop()
 
-        # Проверка на наличие NaN и бесконечных значений
-        if X.isnull().sum().any() or np.isinf(X).any():
-            st.error("Данные содержат пропуски или бесконечные значения.")
-            st.stop()
+    # Приведение всех данных к числовым значениям
+    for col in X.columns:
+        # Превращаем в числовой формат, если возможно
+        X[col] = pd.to_numeric(X[col], errors='coerce')
 
-        # Подготовка категориальных признаков для CatBoost
-        cat_features = []  # Список для хранения имен категориальных столбцов
-        for col in X.columns:
-            if X[col].dtype == 'object':
-                cat_features.append(col)
-                # Преобразуем категориальные значения в строковой формат
-                X[col] = X[col].astype(str)  # Это будет необходимо для CatBoost
+    # Проверка на наличие NaN и бесконечных значений
+    if X.isnull().sum().any() or np.isinf(X).any():
+        st.error("Данные содержат пропуски или бесконечные значения.")
+        st.stop()
+
+    # Подготовка категориальных признаков для CatBoost
+    cat_features = []  # Список для хранения имен категориальных столбцов
+    for col in X.columns:
+        if X[col].dtype == 'object':
+            cat_features.append(col)
+            # Преобразуем категориальные значения в строковой формат
+            X[col] = X[col].astype(str)  # Это будет необходимо для CatBoost
 
         # Обучение модели
         if st.button("🚀 Обучить модель"):
