@@ -43,15 +43,12 @@ with col3:
     if st.button("🔮 Предсказания"):
         st.session_state.page = "🔮 Предсказания"
 
-# Переменная для хранения загруженных данных
+# Переменные для хранения данных и моделей
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 
-if 'model' not in st.session_state:
-    st.session_state.model = None  # Для хранения модели после обучения
-
-if 'model_id' not in st.session_state:
-    st.session_state.model_id = None  # Для хранения ID модели
+if 'models' not in st.session_state:
+    st.session_state.models = {}  # Для хранения модели и её ID после обучения
 
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
@@ -138,7 +135,7 @@ if st.session_state.page == "🔄 Обучение модели":
             st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
 
             # Сохраняем модель и model_id в состоянии сессии
-            st.session_state['model'] = model
+            st.session_state.models[params["model_id"]] = model  # Сохраняем модель под её ID
             st.session_state['model_id'] = params["model_id"]
 
             if type_of_model == "🧠 CatBoost Classifier":
@@ -160,6 +157,9 @@ elif st.session_state.page == "🔮 Предсказания":
             account_ids = data['account_id'].unique()
             account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
 
+            # Выбор модели для предсказания
+            model_id_input = st.selectbox("Выберите ID модели", list(st.session_state.models.keys()))
+
             if st.button("🔮 Получить предсказание"):
                 account_data = data[data['account_id'] == account_id_input]
 
@@ -175,8 +175,8 @@ elif st.session_state.page == "🔮 Предсказания":
                         X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
                     # Проверяем, была ли обучена модель
-                    if 'model' in st.session_state and st.session_state.model is not None:
-                        model = st.session_state['model']
+                    if model_id_input in st.session_state.models:
+                        model = st.session_state.models[model_id_input]
                     else:
                         st.error("Модель не была обучена. Сначала обучите модель.")
                         st.stop()
