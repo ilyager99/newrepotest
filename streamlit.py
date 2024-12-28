@@ -174,7 +174,7 @@ if st.session_state.page == "🔄 Обучение модели":
                 st.bar_chart(feature_importances_df.set_index("Feature"))
 
 elif st.session_state.page == "🔮 Предсказания":
-    st.header("Предсказения на основе обученной модели")
+    st.header("Предсказания на основе обученной модели")
 
     # Проверяем, загружены ли данные
     if st.session_state.uploaded_data is None:
@@ -186,11 +186,31 @@ elif st.session_state.page == "🔮 Предсказания":
         st.error("Данные не содержат столбца 'account_id'.")
         st.stop()
 
-    # Получение уникальных account_id из данных
-    account_ids = data['account_id'].unique()
+    # Переменная состояния для источника Account ID
+    if 'source_option' not in st.session_state:
+        st.session_state.source_option = "Из загруженного датасета"
 
-    # Выбор источника Account ID
-    source_option = "Из загруженного датасета"
+    # Кнопки для выбора источника Account ID
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Из загруженного датасета"):
+            st.session_state.source_option = "Из загруженного датасета"
+
+    with col2:
+        if st.button("Из API сервиса"):
+            account_ids = api_client.get_account_ids()
+            if not account_ids:
+                st.error("Не удалось получить список Account IDs из API.")
+                st.session_state.source_option = "Ошибка при получении Account IDs"
+            else:
+                st.session_state.source_option = "Из API сервиса"
+                st.session_state.account_ids = account_ids  # Сохраняем Account IDs из API
+
+    # Получение уникальных account_id из данных
+    if st.session_state.source_option == "Из загруженного датасета":
+        account_ids = data['account_id'].unique()
+    else:
+        account_ids = st.session_state.account_ids
 
     # Создание 10 слотов для выбора account_id
     selected_account_ids = []
@@ -231,6 +251,7 @@ elif st.session_state.page == "🔮 Предсказания":
                 probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
             st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
 
