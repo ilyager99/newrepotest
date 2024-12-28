@@ -186,21 +186,11 @@ elif st.session_state.page == "🔮 Предсказания":
         st.error("Данные не содержат столбца 'account_id'.")
         st.stop()
 
-    # Используем обычные кнопки для выбора источника account_id
-    source_option = st.selectbox("Выберите источник Account ID", ["Из загруженного датасета", "Из API сервиса"])
-
-    if st.button("Из загруженного датасета"):
-        source_option = "Из загруженного датасета"
-    if st.button("Из API сервиса"):
-        account_ids = api_client.get_account_ids()
-        if not account_ids:
-            st.error("Не удалось получить список Account IDs из API.")
-            st.stop()
-        source_option = "Из API сервиса"
-
     # Получение уникальных account_id из данных
-    if source_option == "Из загруженного датасета":
-        account_ids = data['account_id'].unique()
+    account_ids = data['account_id'].unique()
+
+    # Выбор источника Account ID
+    source_option = "Из загруженного датасета"
 
     # Создание 10 слотов для выбора account_id
     selected_account_ids = []
@@ -241,7 +231,6 @@ elif st.session_state.page == "🔮 Предсказания":
                 probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
             st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
-
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
 
