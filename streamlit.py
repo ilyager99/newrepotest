@@ -192,41 +192,45 @@ elif st.session_state.page == "🔮 Предсказания":
         st.error("Не удалось получить список Account IDs из API.")
         st.stop()
     
-    # Выбор account_id
-    account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
+    # Создание 10 слотов для выбора account_id
+    selected_account_ids = []
+    for i in range(10):
+        selected_account_id = st.selectbox(f"Выберите Account ID для предсказания {i + 1}", account_ids)
+        selected_account_ids.append(selected_account_id)
 
     # Выбор модели для предсказания
     model_id_input = st.selectbox("Выберите ID модели", list(st.session_state.models.keys()))
 
-    if st.button("🔮 Получить предсказание"):
-        account_data = data[data['account_id'] == account_id_input]
+    if st.button("🔮 Получить предсказания"):
+        for account_id_input in selected_account_ids:
+            account_data = data[data['account_id'] == account_id_input]
 
-        if account_data.empty:
-            st.error(f"Нет данных для Account ID {account_id_input}.")
-            st.stop()
+            if account_data.empty:
+                st.error(f"Нет данных для Account ID {account_id_input}.")
+                continue
 
-        X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
+            X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
 
-        # Обработка категориальных переменных
-        categorical_cols = X_predict.select_dtypes(include=['object']).columns
-        for col in categorical_cols:
-            le = LabelEncoder()
-            X_predict[col] = le.fit_transform(X_predict[col].astype(str))
+            # Обработка категориальных переменных
+            categorical_cols = X_predict.select_dtypes(include=['object']).columns
+            for col in categorical_cols:
+                le = LabelEncoder()
+                X_predict[col] = le.fit_transform(X_predict[col].astype(str))
 
-        # Проверяем, была ли обучена модель
-        if model_id_input not in st.session_state.models:
-            st.error("Модель не была обучена. Сначала обучите модель.")
-            st.stop()
+            # Проверяем, была ли обучена модель
+            if model_id_input not in st.session_state.models:
+                st.error("Модель не была обучена. Сначала обучите модель.")
+                st.stop()
 
-        model = st.session_state.models[model_id_input]
+            model = st.session_state.models[model_id_input]
 
-        # Получение предсказания
-        if isinstance(model, CatBoostClassifier):
-            probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-        else:  # Ridge Classifier
-            probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+            # Получение предсказания
+            if isinstance(model, CatBoostClassifier):
+                probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
+            else:  # Ridge Classifier
+                probability = model.predict(X_predict)  # Для Ridge использовать предсказание
 
-        st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+            st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
