@@ -23,12 +23,24 @@ class ModelAPI:
         response = requests.get(f"{self.base_url}/info/{model_id}")
         return response.json()
 
+    def get_account_ids(self):
+        """Получение уникальных account_id из API."""
+        response = requests.get(f"{self.base_url}/account_ids")
+        if response.status_code == 200:
+            return response.json()  # Предполагается, что API возвращает список account_id
+        else:
+            st.error("Не удалось получить Account IDs из API.")
+            return []
+
+# Инициализация API
 host = "http://****"  # Замените на рабочий хост
 port = 8000          # Замените на рабочий порт
 api_client = ModelAPI(host, port)
 
+# Заголовок приложения
 st.title("Модель по анализу данных")
 
+# Инициализация состояния сессии
 if 'page' not in st.session_state:
     st.session_state.page = "🔄 Обучение модели"
 
@@ -52,6 +64,19 @@ if 'model_id' not in st.session_state:
 if 'models' not in st.session_state:
     st.session_state.models = {}  # Для хранения модели и её ID после обучения
 
+# Функции для получения гиперпараметров
+def get_ridge_params(params):
+    """Функция для ввода гиперпараметров Ridge Classifier."""
+    params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
+    params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
+
+def get_catboost_params(params):
+    """Функция для ввода гиперпараметров CatBoost Classifier."""
+    params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
+    params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
+    params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
+    params["l2_leaf_reg"] = st.number_input("L2 Leaf Regularization", value=3, min_value=1, max_value=10)
+
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
 
@@ -59,18 +84,15 @@ if st.session_state.page == "🔄 Обучение модели":
     params = {"type_of_model": type_of_model}
 
     st.subheader("Гиперпараметры модели")
-    if type_of_model == "⚖️ Ridge Classifier":
-        params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
-        params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
 
+    # Выбор гиперпараметров в зависимости от типа модели
+    if type_of_model == "⚖️ Ridge Classifier":
+        get_ridge_params(params)
     elif type_of_model == "🧠 CatBoost Classifier":
-        params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
-        params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
-        params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
-        params["l2_leaf_reg"] = st.number_input("L2 Leaf Regularization", value=3, min_value=1, max_value=10)
+        get_catboost_params(params)
 
     params["model_id"] = st.text_input("Введите ID модели", value="model")
-    uploaded_file = st.file_uploader("📤 Загрузите данные (CSV)", type=["csv"])
+    uploaded_file = st.file_uploader("📤 Загрузите тренировочный датасет (CSV)", type=["csv"])
 
     if uploaded_file is not None:
         data = pd.read_csv(uploaded_file)
@@ -79,22 +101,23 @@ if st.session_state.page == "🔄 Обучение модели":
         st.write(data.head())
 
         target_column = "radiant_win"
-        if target_column in data.columns:
-            X = data.drop(columns=[target_column])
-            y = data[target_column]
 
-            # Обработка категориальных переменных
-            categorical_cols = X.select_dtypes(include=['object']).columns
-            for col in categorical_cols:
-                le = LabelEncoder()
-                X[col] = le.fit_transform(X[col].astype(str))
-
-            st.subheader(f"Целевая переменная: {target_column}")
-            st.write(y.value_counts())
-
-        else:
+        # Проверка целевой переменной
+        if target_column not in data.columns:
             st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
             st.stop()
+
+        X = data.drop(columns=[target_column])
+        y = data[target_column]
+
+        # Обработка категориальных переменных
+        categorical_cols = X.select_dtypes(include=['object']).columns
+        for col in categorical_cols:
+            le = LabelEncoder()
+            X[col] = le.fit_transform(X[col].astype(str))
+
+        st.subheader(f"Целевая переменная: {target_column}")
+        st.write(y.value_counts())
 
         if st.button("🚀 Обучить модель"):
             params["train_data"] = data.to_dict(orient="list")
@@ -153,45 +176,57 @@ if st.session_state.page == "🔄 Обучение модели":
 elif st.session_state.page == "🔮 Предсказания":
     st.header("Предсказания на основе обученной модели")
 
-    if st.session_state.uploaded_data is not None:
-        data = st.session_state.uploaded_data
-        if 'account_id' in data.columns:
-            # Получаем уникальные account_id и даем пользователю выбрать
-            account_ids = data['account_id'].unique()
-            account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
+    # Проверяем, загружены ли данные
+    if st.session_state.uploaded_data is None:
+        st.error("Пожалуйста, сначала загрузите тренировочный датасет.")
+        st.stop()
 
-            # Выбор модели для предсказания
-            model_id_input = st.selectbox("Выберите ID модели", list(st.session_state.models.keys()))
-            if st.button("🔮 Получить предсказание"):
-                account_data = data[data['account_id'] == account_id_input]
+    data = st.session_state.uploaded_data
+    if 'account_id' not in data.columns:
+        st.error("Данные не содержат столбца 'account_id'.")
+        st.stop()
+    
+    # Получаем уникальные account_id из API
+    account_ids = api_client.get_account_ids()
+    if not account_ids:
+        st.error("Не удалось получить список Account IDs из API.")
+        st.stop()
+    
+    # Выбор account_id
+    account_id_input = st.selectbox("Выберите Account ID для предсказания", account_ids)
 
-                if account_data.empty:
-                    st.error(f"Нет данных для Account ID {account_id_input}.")
-                else:
-                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
+    # Выбор модели для предсказания
+    model_id_input = st.selectbox("Выберите ID модели", list(st.session_state.models.keys()))
 
-                    # Обработка категориальных переменных
-                    categorical_cols = X_predict.select_dtypes(include=['object']).columns
-                    for col in categorical_cols:
-                        le = LabelEncoder()
-                        X_predict[col] = le.fit_transform(X_predict[col].astype(str))
+    if st.button("🔮 Получить предсказание"):
+        account_data = data[data['account_id'] == account_id_input]
 
-                    # Проверяем, была ли обучена модель
-                    if model_id_input in st.session_state.models:
-                        model = st.session_state.models[model_id_input]
-                    else:
-                        st.error("Модель не была обучена. Сначала обучите модель.")
-                        st.stop()
+        if account_data.empty:
+            st.error(f"Нет данных для Account ID {account_id_input}.")
+            st.stop()
 
-                    # Получение предсказания
-                    if isinstance(model, CatBoostClassifier):
-                        probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                    else:  # Ridge Classifier
-                        probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+        X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
 
-                    st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
-        else:
-            st.error("Данные не содержат столбца 'account_id'.")
+        # Обработка категориальных переменных
+        categorical_cols = X_predict.select_dtypes(include=['object']).columns
+        for col in categorical_cols:
+            le = LabelEncoder()
+            X_predict[col] = le.fit_transform(X_predict[col].astype(str))
+
+        # Проверяем, была ли обучена модель
+        if model_id_input not in st.session_state.models:
+            st.error("Модель не была обучена. Сначала обучите модель.")
+            st.stop()
+
+        model = st.session_state.models[model_id_input]
+
+        # Получение предсказания
+        if isinstance(model, CatBoostClassifier):
+            probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
+        else:  # Ridge Classifier
+            probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+
+        st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
