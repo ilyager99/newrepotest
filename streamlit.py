@@ -185,12 +185,18 @@ elif st.session_state.page == "🔮 Предсказания":
     if 'account_id' not in data.columns:
         st.error("Данные не содержат столбца 'account_id'.")
         st.stop()
-    
-    # Получаем уникальные account_id из API
-    account_ids = api_client.get_account_ids()
-    if not account_ids:
-        st.error("Не удалось получить список Account IDs из API.")
-        st.stop()
+
+    # Опции для выбора источника account_id
+    source_option = st.selectbox("Выберите источник Account ID", ["Из загруженного датасета", "Из API сервиса"])
+
+    # Получение уникальных account_id из данных
+    if source_option == "Из загруженного датасета":
+        account_ids = data['account_id'].unique()
+    else:  # Из API сервиса
+        account_ids = api_client.get_account_ids()
+        if not account_ids:
+            st.error("Не удалось получить список Account IDs из API.")
+            st.stop()
     
     # Создание 10 слотов для выбора account_id
     selected_account_ids = []
