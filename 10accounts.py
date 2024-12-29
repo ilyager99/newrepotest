@@ -1,257 +1,165 @@
 import streamlit as st
 import requests
-import time
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score
-from catboost import CatBoostClassifier
-from sklearn.linear_model import RidgeClassifier
-from sklearn.preprocessing import LabelEncoder
 
 class ModelAPI:
     def __init__(self, host: str, port: int):
         self.base_url = f"{host}:{port}/api/v1/models"
-
+    
     def fit_model(self, params: dict):
-        """Отправка параметров для обучения модели."""
+        """Запуск асинхронного обучения модели."""
         response = requests.post(f"{self.base_url}/fit", json=params)
         return response.json()
-
-    def get_model_info(self, model_id: str):
-        """Получение информации об обученной модели.""" 
-        response = requests.get(f"{self.base_url}/info/{model_id}")
+    
+    def get_fit_status(self):
+        """Получение статуса асинхронной задачи обучения."""
+        response = requests.get(f"{self.base_url}/fit/status")
         return response.json()
     
-    def list_models(self):
-        """Получение списка обученных моделей."""
+    def get_model_list(self):
+        """Получение списка всех обученных моделей."""
         response = requests.get(f"{self.base_url}/list")
         return response.json()
 
+    def activate_model(self, model_id: str):
+        """Установка активной модели для прогноза."""
+        response = requests.put(f"{self.base_url}/activate", json={"model_id": model_id})
+        return response.json()
+
+    def predict(self, data: dict):
+        """Прогноз исхода на основе выбранных данных с активированной моделью."""
+        response = requests.post(f"{self.base_url}/predict", json=data)
+        return response.json()
+
+    def predict_csv(self, csv_data):
+        """Прогноз исхода на основе CSV-файла."""
+        response = requests.post(f"{self.base_url}/predict_csv", files={"file": csv_data})
+        return response.json()
+
+    def get_account_ids(self):
+        """Получение уникальных account_ids из API."""
+        response = requests.get(f"{self.base_url}/data/account_ids")
+        if response.status_code == 200:
+            return response.json()  # Предполагается, что API возвращает список account_ids
+        else:
+            st.error("Не удалось получить Account IDs из API.")
+            return []
+
+    def get_model_info(self, model_id: str):
+        """Получение информации об обученной модели."""
+        response = requests.get(f"{self.base_url}/model_info", params={"model_id": model_id})
+        return response.json()
+
+# Инициализация API
 host = "http://****"  # Замените на рабочий хост
 port = 8000          # Замените на рабочий порт
 api_client = ModelAPI(host, port)
 
+# Заголовок приложения
 st.title("Модель по анализу данных")
 
+# Инициализация состояния сессии
 if 'page' not in st.session_state:
     st.session_state.page = "🔄 Обучение модели"
 
-with st.sidebar:
-    # Кнопки меню
-    if st.button("🔄 Обучение модели"):
-        st.session_state.page = "🔄 Обучение модели"
-    if st.button("ℹ️ Информация о модели"):
-        st.session_state.page = "ℹ️ Информация о модели"
-    if st.button("🔮 Предсказания"):
-        st.session_state.page = "🔮 Предсказания"
+# Создание бокового меню для навигации
+st.sidebar.header("Меню быстрого доступа")
+if st.sidebar.button("🔄 Обучение модели"):
+    st.session_state.page = "🔄 Обучение модели"
+if st.sidebar.button("ℹ️ Информация о модели"):
+    st.session_state.page = "ℹ️ Информация о модели"
+if st.sidebar.button("🔮 Предсказания"):
+    st.session_state.page = "🔮 Предсказания"
 
 # Переменные для хранения данных и моделей
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 
+if 'model_id' not in st.session_state:
+    st.session_state.model_id = None
+
 if 'models' not in st.session_state:
-    st.session_state.models = {}  # Для хранения модели и её ID после обучения
+    st.session_state.models = []  # Список обученных моделей
+
+# Функции для получения гиперпараметров
+def get_ridge_params(params):
+    """Сбор гиперпараметров для Ridge Classifier."""
+    params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
+    params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
+
+def get_catboost_params(params):
+    """Сбор гиперпараметров для CatBoost Classifier."""
+    params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
+    params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
+    params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
+    params["l2_leaf_reg"] = st.number_input("L2 Leaf Regularization", value=3, min_value=1, max_value=10)
 
 if st.session_state.page == "🔄 Обучение модели":
     st.header("Обучение модели")
-
+    
     type_of_model = st.selectbox("Выберите модель", ["⚖️ Ridge Classifier", "🧠 CatBoost Classifier"])
     params = {"type_of_model": type_of_model}
 
     st.subheader("Гиперпараметры модели")
+
+    # Получение гиперпараметров в зависимости от выбранной модели
     if type_of_model == "⚖️ Ridge Classifier":
-        params["alpha"] = st.number_input("Alpha", value=1.0, min_value=0.0)
-        params["fit_intercept"] = st.checkbox("Fit Intercept", value=True)
-
+        get_ridge_params(params)
     elif type_of_model == "🧠 CatBoost Classifier":
-        params["learning_rate"] = st.number_input("Learning Rate", value=0.1, min_value=0.01, max_value=1.0)
-        params["depth"] = st.slider("Depth", min_value=1, max_value=16, value=6)
-        params["iterations"] = st.number_input("Iterations", value=100, min_value=1)
-        params["l2_leaf_reg"] = st.number_input("L2 Leaf Regularization", value=3, min_value=1, max_value=10)
+        get_catboost_params(params)
 
-    params["model_id"] = st.text_input("Введите ID модели", value="model")
-    uploaded_file = st.file_uploader("📤 Загрузите данные (CSV)", type=["csv"])
-    
-    if uploaded_file is not None:
-        data = pd.read_csv(uploaded_file)
-        st.session_state.uploaded_data = data  # Сохраняем загруженные данные в состоянии сессии
-        st.write("Данные:")
-        st.write(data.head())
-
-        target_column = "radiant_win"
-        if target_column in data.columns:
-            X = data.drop(columns=[target_column])
-            y = data[target_column]
-
-            # Обработка категориальных переменных
-            categorical_cols = X.select_dtypes(include=['object']).columns
-            for col in categorical_cols:
-                le = LabelEncoder()
-                X[col] = le.fit_transform(X[col].astype(str))
-
-            st.subheader(f"Целевая переменная: {target_column}")
-            st.write(y.value_counts())
-
-        else:
-            st.error(f"Целевая переменная '{target_column}' не найдена в данных.")
-            st.stop()
-
-        if st.button("🚀 Обучить модель"):
-            params["train_data"] = data.to_dict(orient="list")
-            start_time = time.time()
-
-            # Создание и обучение модели
-            if type_of_model == "⚖️ Ridge Classifier":
-                model = RidgeClassifier(alpha=params["alpha"], fit_intercept=params["fit_intercept"])
-            elif type_of_model == "🧠 CatBoost Classifier":
-                model = CatBoostClassifier(
-                    learning_rate=params["learning_rate"],
-                    depth=params["depth"],
-                    iterations=params["iterations"],
-                    l2_leaf_reg=params["l2_leaf_reg"],
-                    verbose=False)
-
-            st.write("Кросс-валидация началась")
-            kf = KFold(n_splits=5, shuffle=True, random_state=42)
-            fold_results = []
-
-            for train_index, test_index in kf.split(X):
-                X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-                model.fit(X_train, y_train)
-                predictions = model.predict(X_test)
-                accuracy = accuracy_score(y_test, predictions)
-                fold_results.append(accuracy)
-
-            mean_accuracy = np.mean(fold_results)
-            std_accuracy = np.std(fold_results)
-
-            end_time = time.time()
-
-            st.success("✅ Модель обучена!")
-            st.write(f"⏳ Время обучения составило: {end_time - start_time:.2f} сек")
-            st.write("📊 Результаты кросс-валидации:")
-            st.write(pd.DataFrame({"Fold": range(1, 6), "Accuracy": fold_results}))
-            st.write(f"🏆 Средняя точность: {mean_accuracy:.4f}")
-            st.write(f"📉 Стандартное отклонение точности: {std_accuracy:.4f}")
-
-            # Сохраняем модель и model_id в состоянии сессии
-            st.session_state.models[params["model_id"]] = model  # Сохраняем модель под её ID
-            st.session_state['model_id'] = params["model_id"]
-
-            if type_of_model == "🧠 CatBoost Classifier":
-                feature_importances = model.get_feature_importance()
-                feature_importances_df = pd.DataFrame({
-                    "Feature": X.columns,
-                    "Importance": feature_importances
-                }).sort_values(by="Importance", ascending=False)
-                st.write("📈 Важность признаков:")
-                st.bar_chart(feature_importances_df.set_index("Feature"))
+    if st.button("🚀 Обучить модель"):
+        response = api_client.fit_model(params)
+        st.success("Запуск обучения модели начат!")
 
 elif st.session_state.page == "🔮 Предсказания":
     st.header("Предсказания на основе обученной модели")
 
-    # Получение списка обученных моделей
-    models_list = api_client.list_models()
-    if models_list:
-        selected_model_id = st.selectbox("Выберите обученную модель", options=models_list)
-    else:
-        st.error("Нет доступных моделей для предсказаний.")
+    # Загрузка account IDs
+    account_ids = api_client.get_account_ids()
+    if not account_ids:
+        st.error("Не удалось загрузить account IDs.")
         st.stop()
-
-    if st.session_state.uploaded_data is not None:
-        data = st.session_state.uploaded_data
-
-        # Получаем уникальные account_id и даем пользователю выбрать
-        radiant_ids = data[data['isRadiant'] == True]['account_id'].unique()
-        dire_ids = data[data['isRadiant'] == False]['account_id'].unique()
-
-        account_id_radiant = st.multiselect("Выберите Account ID для Radiant", radiant_ids)
-        account_id_dire = st.multiselect("Выберите Account ID для Dire", dire_ids)
-
-        if st.button("🔮 Получить предсказания"):
-            st.write("Предсказания для команды Radiant:")
-            for account_id_input in account_id_radiant:
-                account_data = data[data['account_id'] == account_id_input]
-                if account_data.empty:
-                    st.error(f"Нет данных для Account ID {account_id_input} (Radiant).")
-                else:
-                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
-                    # Обработка категориальных переменных
-                    categorical_cols = X_predict.select_dtypes(include=['object']).columns
-                    for col in categorical_cols:
-                        le = LabelEncoder()
-                        X_predict[col] = le.fit_transform(X_predict[col].astype(str))
-
-                    # Проверяем, была ли выбрана модель
-                    if selected_model_id:
-                        # Вытаскиваем модель по ID
-                        model = st.session_state.models.get(selected_model_id)
-                        if not model:
-                            st.error("Выбранная модель не загружена. Сначала обучите модель.")
-                            st.stop()
     
-                        # Получение предсказания
-                        if isinstance(model, CatBoostClassifier):
-                            probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                        else:  # Ridge Classifier
-                            probability = model.predict(X_predict)  # Для Ridge использовать предсказание
+    selected_account_ids = st.multiselect("Выберите Account IDs для предсказания", account_ids["account_ids"])
+    if st.button("🔮 Получить предсказания"):
+        predictions = []
+        for account_id in selected_account_ids:
+            data = {"account_id": account_id}  # Подготовка данных для запроса
+            prediction_response = api_client.predict(data)
+            predictions.append(f"Предсказание для Account ID {account_id}: {prediction_response}")
 
-                        st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
+        for prediction in predictions:
+            st.write(prediction)
 
-            st.write("Предсказания для команды Dire:")
-            for account_id_input in account_id_dire:
-                account_data = data[data['account_id'] == account_id_input]
-                if account_data.empty:
-                    st.error(f"Нет данных для Account ID {account_id_input} (Dire).")
-                else:
-                    X_predict = account_data.drop(columns=['radiant_win'])  # Уберите целевую переменную
-                    # Обработка категориальных переменных
-                    categorical_cols = X_predict.select_dtypes(include=['object']).columns
-                    for col in categorical_cols:
-                        le = LabelEncoder()
-                        X_predict[col] = le.fit_transform(X_predict[col].astype(str))
-
-                    # Проверяем, была ли выбрана модель
-                    if selected_model_id:
-                        # Вытаскиваем модель по ID
-                        model = st.session_state.models.get(selected_model_id)
-                        if not model:
-                            st.error("Выбранная модель не загружена. Сначала обучите модель.")
-                            st.stop()
-
-                        # Получение предсказания
-                        if isinstance(model, CatBoostClassifier):
-                            probability = model.predict_proba(X_predict)[:, 1]  # Вероятность победы для CatBoost
-                        else:  # Ridge Classifier
-                            probability = model.predict(X_predict)  # Для Ridge использовать предсказание
-
-                        st.write(f"Вероятность победы для Account ID {account_id_input}: {probability[0]:.2f}")
-
-    else:
-        st.error("Данные не содержат столбца 'account_id'.")
-
+    # Опция загрузить тестовый датасет
+    uploaded_test_file = st.file_uploader("📤 Загрузите тестовый датасет (CSV)", type=["csv"])
+    if uploaded_test_file is not None and st.button("Отправить тестовый файл для предсказаний"):
+        prediction_csv_response = api_client.predict_csv(uploaded_test_file)
+        st.write("Предсказания из CSV файла:")
+        st.json(prediction_csv_response)
 
 elif st.session_state.page == "ℹ️ Информация о модели":
     st.header("Информация о модели")
-    
-    model_id = st.text_input("Введите ID модели для получения информации", value="model")
 
+    if st.button("Загрузить список обученных моделей"):
+        model_list = api_client.get_model_list()
+        st.session_state.models = model_list.get("models", [])
+        st.write("Обученные модели:")
+        st.write(st.session_state.models)
+
+    model_id_input = st.selectbox("Выберите ID модели", [model['id'] for model in st.session_state.models])
     if st.button("📖 Получить информацию о модели"):
-        model_info = api_client.get_model_info(model_id)
+        model_info = api_client.get_model_info(model_id_input)
         if model_info:
             st.write("📝 Информация о модели:")
             st.json(model_info)
-
-            if "feature_importances" in model_info:
-                st.write("📊 Важность признаков:")
-                feature_importances = model_info["feature_importances"]
-                feature_importances_df = pd.DataFrame({
-                    "Feature": feature_importances.keys(),
-                    "Importance": feature_importances.values()
-                }).sort_values(by="Importance", ascending=False)
-                st.bar_chart(feature_importances_df.set_index("Feature"))
         else:
-            st.error("❌ Такой модельки нет, sorry :(")
+            st.error("❌ Эта модель не существует.")
+        
+    if st.button("Активировать выбранную модель"):
+        activate_response = api_client.activate_model(model_id_input)
+        if activate_response.get("status") == "success":
+            st.success("Модель успешно активирована!")
+        else:
+            st.error("Не удалось активировать модель.")
